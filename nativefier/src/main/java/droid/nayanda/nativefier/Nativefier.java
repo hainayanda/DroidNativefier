@@ -1,5 +1,6 @@
 package droid.nayanda.nativefier;
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -67,20 +68,12 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
     public void asyncGet(@NonNull final String key, final Finisher<TValue> finisher) {
         final TValue obj = get(key);
         if (obj == null && fetcher != null) {
-            fetcher.asyncFetch(key, new Finisher<TValue>() {
-                @Override
-                public void onFinished(final TValue object) {
-                    if (object != null) {
-                        memoryCacheManager.put(key, object);
-                        new Handler().post(new Runnable() {
-                            @Override
-                            public void run() {
-                                diskCacheManager.put(key, object);
-                            }
-                        });
-                    }
-                    finisher.onFinished(object);
+            fetcher.asyncFetch(key, object -> {
+                if (object != null) {
+                    memoryCacheManager.put(key, object);
+                    diskCacheManager.put(key, object);
                 }
+                finisher.onFinished(object);
             });
         } else finisher.onFinished(obj);
     }

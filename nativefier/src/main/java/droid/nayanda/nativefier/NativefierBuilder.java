@@ -19,32 +19,32 @@ public class NativefierBuilder<TValue> {
     NativefierBuilder() {
     }
 
-    public NativefierBuilder setContext(@NonNull Context context) {
+    public NativefierBuilder<TValue> setContext(@NonNull Context context) {
         this.context = context;
         return this;
     }
 
-    public NativefierBuilder setContainerName(@NonNull String containerName) {
+    public NativefierBuilder<TValue> setContainerName(@NonNull String containerName) {
         this.containerName = containerName;
         return this;
     }
 
-    public NativefierBuilder setMaxCacheNumber(int maxCacheNumber) {
+    public NativefierBuilder<TValue> setMaxCacheNumber(int maxCacheNumber) {
         this.maxCacheNumber = maxCacheNumber;
         return this;
     }
 
-    public NativefierBuilder setSerializer(@NonNull Serializer<TValue> serializer) {
+    public NativefierBuilder<TValue> setSerializer(@NonNull Serializer<TValue> serializer) {
         this.serializer = serializer;
         return this;
     }
 
-    public NativefierBuilder setFetcher(@NonNull Fetcher<TValue> fetcher) {
+    public NativefierBuilder<TValue> setFetcher(@NonNull Fetcher<TValue> fetcher) {
         this.fetcher = fetcher;
         return this;
     }
 
-    public NativefierBuilder setAppVersion(@NonNull String appVersion) {
+    public NativefierBuilder<TValue> setAppVersion(@NonNull String appVersion) {
         this.appVersion = appVersion;
         return this;
     }

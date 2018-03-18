@@ -18,32 +18,32 @@ public class JsonNativefierBuilder<TJsonObj> {
     JsonNativefierBuilder() {
     }
 
-    public JsonNativefierBuilder setContext(@NonNull Context context) {
+    public JsonNativefierBuilder<TJsonObj> setContext(@NonNull Context context) {
         this.context = context;
         return this;
     }
 
-    public JsonNativefierBuilder setContainerName(@NonNull String containerName) {
+    public JsonNativefierBuilder<TJsonObj> setContainerName(@NonNull String containerName) {
         this.containerName = containerName;
         return this;
     }
 
-    public JsonNativefierBuilder setMaxCacheNumber(int maxCacheNumber) {
+    public JsonNativefierBuilder<TJsonObj> setMaxCacheNumber(int maxCacheNumber) {
         this.maxCacheNumber = maxCacheNumber;
         return this;
     }
 
-    public JsonNativefierBuilder setJsonObjClass(@NonNull Class<TJsonObj> jsonObjClass) {
+    public JsonNativefierBuilder<TJsonObj> setJsonObjClass(@NonNull Class<TJsonObj> jsonObjClass) {
         this.jsonObjClass = jsonObjClass;
         return this;
     }
 
-    public JsonNativefierBuilder setFetcher(@NonNull Fetcher<TJsonObj> fetcher) {
+    public JsonNativefierBuilder<TJsonObj> setFetcher(@NonNull Fetcher<TJsonObj> fetcher) {
         this.fetcher = fetcher;
         return this;
     }
 
-    public JsonNativefierBuilder setAppVersion(@NonNull String appVersion) {
+    public JsonNativefierBuilder<TJsonObj> setAppVersion(@NonNull String appVersion) {
         this.appVersion = appVersion;
         return this;
     }

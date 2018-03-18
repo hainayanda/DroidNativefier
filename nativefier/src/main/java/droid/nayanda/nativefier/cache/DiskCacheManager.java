@@ -31,15 +31,15 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private Serializer<TValue> serializer;
     private int maxCacheNumber;
     private LinkedList<String> index;
-    private LinkedList<String> pendingRemoves;
-    private LinkedHashMap<String, TValue> pendingPut;
+    private LinkedList<String> pendingRemoves = new LinkedList<>();
+    private LinkedHashMap<String, TValue> pendingPut = new LinkedHashMap<>();
     private boolean isWriting = false;
     private boolean isIndexNeedUpdate = false;
 
     public DiskCacheManager(@NonNull Context context, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
         this.directory = new File(context.getCacheDir(), containerName);
         if (!this.directory.exists()) {
-            if (!indexFile.mkdir())
+            if (!directory.mkdir())
                 throw new IOException("Failed to create directory for " + containerName);
         }
         this.indexFile = new File(this.directory, "index.dat");
@@ -165,22 +165,19 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private void writeAllPendingTask() {
         if (isWriting) return;
         isWriting = true;
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                while (pendingPut.size() > 0 || pendingRemoves.size() > 0 || isIndexNeedUpdate) {
-                    if (pendingRemoves.size() > 0) {
-                        executePendingRemoves();
-                    }
-                    if (pendingPut.size() > 0) {
-                        executePendingPut();
-                    }
-                    if (isIndexNeedUpdate) {
-                        updateIndex();
-                    }
+        AsyncTask.execute(() -> {
+            while (pendingPut.size() > 0 || pendingRemoves.size() > 0 || isIndexNeedUpdate) {
+                if (pendingRemoves.size() > 0) {
+                    executePendingRemoves();
                 }
-                isWriting = false;
+                if (pendingPut.size() > 0) {
+                    executePendingPut();
+                }
+                if (isIndexNeedUpdate) {
+                    updateIndex();
+                }
             }
+            isWriting = false;
         });
     }
 
@@ -190,16 +187,17 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             if (!indexFile.exists()) {
                 if (!indexFile.createNewFile()) throw new IOException("Failed to create new file");
             }
-            StringBuilder builder = new StringBuilder();
-            for (String line : index) {
-                builder.append(line);
-                builder.append('\n');
+            if(index.size() > 0) {
+                LinkedList<String> thisIndex = new LinkedList<>(index);
+                isIndexNeedUpdate = false;
+                StringBuilder builder = new StringBuilder();
+                for (String line : thisIndex) {
+                    builder.append(line).append('\n');
+                }
+                writer = new BufferedWriter(new FileWriter(indexFile));
+                writer.write(builder.toString());
+                writer.close();
             }
-            builder.deleteCharAt(builder.length() - 1);
-            isIndexNeedUpdate = false;
-            writer = new BufferedWriter(new FileWriter(indexFile));
-            writer.write(builder.toString());
-            writer.close();
         } catch (IOException e) {
             e.printStackTrace();
             if (writer != null) try {
