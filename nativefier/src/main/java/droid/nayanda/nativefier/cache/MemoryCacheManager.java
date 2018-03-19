@@ -69,6 +69,18 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
         return false;
     }
 
+    @Override
+    public void delete(@NonNull String key) {
+        for (int i = 0; i < lruCache.size(); i++) {
+            Entry entry = lruCache.get(i);
+            String entryKey = entry.getKey();
+            if (entryKey.equals(key)) {
+                lruCache.remove(i);
+                return;
+            }
+        }
+    }
+
     private class Entry {
         private final String key;
         private final TValue value;

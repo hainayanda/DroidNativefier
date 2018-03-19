@@ -260,4 +260,11 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     public boolean isExist(@NonNull String key) {
         return index.contains(key);
     }
+
+    @Override
+    public void delete(@NonNull String key) {
+        pendingPut.remove(key);
+        pendingRemoves.add(key);
+        index.remove(key);
+    }
 }

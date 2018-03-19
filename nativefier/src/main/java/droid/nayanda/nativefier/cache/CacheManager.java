@@ -17,4 +17,6 @@ public interface CacheManager<TValue> {
     void clear();
 
     boolean isExist(@NonNull String key);
+
+    void delete(@NonNull String key);
 }

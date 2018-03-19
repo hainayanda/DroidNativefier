@@ -97,4 +97,10 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
     public boolean isExist(@NonNull String key) {
         return (memoryCacheManager.isExist(key) || diskCacheManager.isExist(key));
     }
+
+    @Override
+    public void delete(@NonNull String key) {
+        memoryCacheManager.delete(key);
+        diskCacheManager.delete(key);
+    }
 }
