@@ -48,7 +48,7 @@ public class JsonNativefierBuilder<TJsonObj> {
         return this;
     }
 
-    public Nativefier<TJsonObj> createJsonNativefier() throws IOException {
+    public Nativefier<TJsonObj> createNativefier() throws IOException {
         if (context == null) throw new IllegalStateException("context cannot be null");
         if (containerName == null) throw new IllegalStateException("containerName cannot be null");
         if (jsonObjClass == null) throw new IllegalStateException("jsonObjClass cannot be null");

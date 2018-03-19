@@ -12,7 +12,7 @@ public class Model implements Serializable {
     private int number;
     private boolean isTrue;
 
-    Model(String name, int number, boolean isTrue) {
+    public Model(String name, int number, boolean isTrue) {
         this.name = name;
         this.number = number;
         this.isTrue = isTrue;

@@ -37,12 +37,11 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
     @Override
     public void put(@NonNull String key, @NonNull TValue value) {
         Entry newEntry = new Entry(key, value);
-        for (Entry entry : lruCache) {
+        for (int i = 0; i < lruCache.size(); i++) {
+            Entry entry = lruCache.get(i);
             if (entry.getKey().equals(key)) {
-                lruCache.remove(entry);
-                lruCache.addFirst(newEntry);
-                removeLastEntry();
-                return;
+                lruCache.remove(i);
+                break;
             }
         }
         lruCache.addFirst(newEntry);
@@ -62,8 +61,10 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public boolean isExist(@NonNull String key) {
-        for (Entry entry : lruCache) {
-            if (entry.getKey().equals(key)) return true;
+        for (int i = 0; i < lruCache.size(); i++) {
+            Entry entry = lruCache.get(i);
+            String entryKey = entry.getKey();
+            if (entryKey.equals(key)) return true;
         }
         return false;
     }

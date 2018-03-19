@@ -1,12 +1,11 @@
 package droid.nayanda.nativefier;
 
-import android.app.Activity;
 import android.content.Context;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 
 import java.io.IOException;
 
+import droid.nayanda.nativefier.base.ArgumentsFinisher;
 import droid.nayanda.nativefier.base.Fetcher;
 import droid.nayanda.nativefier.base.Finisher;
 import droid.nayanda.nativefier.cache.CacheManager;
@@ -65,15 +64,19 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
         return obj;
     }
 
-    public void asyncGet(@NonNull final String key, final Finisher<TValue> finisher) {
+    public void asyncGet(@NonNull String key, final Finisher<TValue> finisher) {
         final TValue obj = get(key);
         if (obj == null && fetcher != null) {
-            fetcher.asyncFetch(key, object -> {
-                if (object != null) {
-                    memoryCacheManager.put(key, object);
-                    diskCacheManager.put(key, object);
-                }
-                finisher.onFinished(object);
+            fetcher.asyncFetch(key,
+                    new ArgumentsFinisher<TValue, Object>(finisher, key, memoryCacheManager, diskCacheManager) {
+                        @Override
+                        public void onFinished(TValue obj, Object[] args) {
+                            if (obj != null) {
+                                ((CacheManager<TValue>) args[2]).put((String) args[1], obj);
+                                ((CacheManager<TValue>) args[3]).put((String) args[1], obj);
+                            }
+                            ((Finisher<TValue>) args[0]).onFinished(obj);
+                        }
             });
         } else finisher.onFinished(obj);
     }
@@ -92,15 +95,6 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
 
     @Override
     public boolean isExist(@NonNull String key) {
-        if (memoryCacheManager.isExist(key)) return true;
-        else {
-            boolean exist = diskCacheManager.isExist(key);
-            if (exist) {
-                TValue obj = diskCacheManager.get(key);
-                memoryCacheManager.put(key, obj);
-                return true;
-            }
-            return false;
-        }
+        return (memoryCacheManager.isExist(key) || diskCacheManager.isExist(key));
     }
 }

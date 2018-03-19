@@ -83,7 +83,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         BufferedReader reader = null;
         LinkedList<String> strings = new LinkedList<>();
         try {
-            InputStream inputStream = new FileInputStream(file);
+            InputStream inputStream = new FileInputStream(file.getAbsoluteFile());
             reader = new BufferedReader(new InputStreamReader(inputStream));
             String line = reader.readLine();
             while (line != null) {
@@ -194,7 +194,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                 for (String line : thisIndex) {
                     builder.append(line).append('\n');
                 }
-                writer = new BufferedWriter(new FileWriter(indexFile));
+                writer = new BufferedWriter(new FileWriter(indexFile.getAbsoluteFile()));
                 writer.write(builder.toString());
                 writer.close();
             }
@@ -209,7 +209,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     }
 
     private void executePendingPut() {
-        Set<Map.Entry<String, TValue>> puts = pendingPut.entrySet();
+        Set<Map.Entry<String, TValue>> puts = ((LinkedHashMap<String, TValue>) (pendingPut.clone())).entrySet();
         pendingPut.clear();
         for (Map.Entry<String, TValue> entry : puts) {
             FileOutputStream outputStream = null;
@@ -220,7 +220,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                     if (!file.createNewFile())
                         throw new IOException("Failed to create new file : " + entry.getKey());
                 }
-                outputStream = new FileOutputStream(file);
+                outputStream = new FileOutputStream(file.getAbsoluteFile());
                 outputStream.write(bytes);
                 outputStream.close();
             } catch (IOException e) {
@@ -235,7 +235,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     }
 
     private void executePendingRemoves() {
-        LinkedList<String> removes = new LinkedList<>(pendingRemoves);
+        LinkedList<String> removes = (LinkedList<String>) pendingRemoves.clone();
         pendingRemoves.clear();
         for (String remove : removes) {
             File file = new File(directory, remove + ".ch");

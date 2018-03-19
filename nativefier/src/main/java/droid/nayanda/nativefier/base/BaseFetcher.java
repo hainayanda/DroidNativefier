@@ -16,7 +16,7 @@ public abstract class BaseFetcher<TValue> implements Fetcher<TValue> {
 
     @Override
     public void asyncFetch(@NonNull String key, @NonNull Finisher<TValue> finisher) {
-        FetcherTask task = new FetcherTask<>(this.task, finisher);
+        FetcherTask<TValue> task = new FetcherTask<>(this.task, finisher);
         task.execute(key);
     }
 }

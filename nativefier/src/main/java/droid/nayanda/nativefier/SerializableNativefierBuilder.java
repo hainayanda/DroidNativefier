@@ -43,7 +43,7 @@ public class SerializableNativefierBuilder<TValue extends Serializable> {
         return this;
     }
 
-    public Nativefier<TValue> createSerializableNativefier() throws IOException {
+    public Nativefier<TValue> createNativefier() throws IOException {
         if (context == null) throw new IllegalStateException("context cannot be null");
         if (containerName == null) throw new IllegalStateException("containerName cannot be null");
         if (appVersion != null)
