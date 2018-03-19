@@ -14,7 +14,7 @@ public class SerializableNativefierBuilder<TValue extends Serializable> {
     private int maxCacheNumber;
     private Fetcher<TValue> fetcher;
     private String appVersion;
-    private DiskUsage diskUsage;
+    private DiskUsage diskUsage = DiskUsage.EXTERNAL;
 
     SerializableNativefierBuilder() {
     }

@@ -59,10 +59,6 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         this.maxCacheNumber = maxCacheNumber;
     }
 
-    public DiskCacheManager(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String appVersion, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
-        this(context, diskUsage, appVersion + "_" + containerName, maxCacheNumber, serializer);
-    }
-
     private static byte[] readFileToBytes(File file) {
         FileInputStream inputStream = null;
         try {

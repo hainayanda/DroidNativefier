@@ -15,7 +15,7 @@ public class NativefierBuilder<TValue> {
     private Serializer<TValue> serializer;
     private Fetcher<TValue> fetcher = null;
     private String appVersion;
-    private DiskUsage diskUsage;
+    private DiskUsage diskUsage = DiskUsage.EXTERNAL;
 
     NativefierBuilder() {
     }
