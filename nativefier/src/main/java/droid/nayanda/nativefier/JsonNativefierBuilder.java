@@ -14,6 +14,7 @@ public class JsonNativefierBuilder<TJsonObj> {
     private Class<TJsonObj> jsonObjClass;
     private Fetcher<TJsonObj> fetcher;
     private String appVersion;
+    private DiskUsage diskUsage = DiskUsage.EXTERNAL;
 
     JsonNativefierBuilder() {
     }
@@ -48,12 +49,17 @@ public class JsonNativefierBuilder<TJsonObj> {
         return this;
     }
 
+    public JsonNativefierBuilder<TJsonObj> setDiskUsage(@NonNull DiskUsage diskUsage) {
+        this.diskUsage = diskUsage;
+        return this;
+    }
+
     public Nativefier<TJsonObj> createNativefier() throws IOException {
         if (context == null) throw new IllegalStateException("context cannot be null");
         if (containerName == null) throw new IllegalStateException("containerName cannot be null");
         if (jsonObjClass == null) throw new IllegalStateException("jsonObjClass cannot be null");
         if (appVersion != null)
-            return new JsonNativefier<>(context, appVersion, containerName, maxCacheNumber, jsonObjClass, fetcher);
-        return new JsonNativefier<>(context, containerName, maxCacheNumber, jsonObjClass, fetcher);
+            return new JsonNativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, jsonObjClass, fetcher);
+        return new JsonNativefier<>(context, diskUsage, containerName, maxCacheNumber, jsonObjClass, fetcher);
     }
 }

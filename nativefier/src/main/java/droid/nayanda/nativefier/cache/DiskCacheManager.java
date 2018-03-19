@@ -18,6 +18,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
+import droid.nayanda.nativefier.DiskUsage;
 import droid.nayanda.nativefier.serializer.Serializer;
 
 /**
@@ -36,8 +37,15 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private boolean isWriting = false;
     private boolean isIndexNeedUpdate = false;
 
-    public DiskCacheManager(@NonNull Context context, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
-        this.directory = new File(context.getCacheDir(), containerName);
+    public DiskCacheManager(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
+        switch (diskUsage) {
+            case EXTERNAL:
+                this.directory = new File(context.getExternalCacheDir(), containerName);
+                break;
+            default:
+                this.directory = new File(context.getCacheDir(), containerName);
+                break;
+        }
         if (!this.directory.exists()) {
             if (!directory.mkdir())
                 throw new IOException("Failed to create directory for " + containerName);
@@ -51,8 +59,8 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         this.maxCacheNumber = maxCacheNumber;
     }
 
-    public DiskCacheManager(@NonNull Context context, @NonNull String appVersion, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
-        this(context, appVersion + "_" + containerName, maxCacheNumber, serializer);
+    public DiskCacheManager(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String appVersion, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
+        this(context, diskUsage, appVersion + "_" + containerName, maxCacheNumber, serializer);
     }
 
     private static byte[] readFileToBytes(File file) {

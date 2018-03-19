@@ -15,6 +15,6 @@ import droid.nayanda.nativefier.serializer.BitmapSerializer;
 class BitmapNativefier extends Nativefier<Bitmap> {
 
     BitmapNativefier(Context context, int maxCacheNumber, Fetcher<Bitmap> fetcher) throws IOException {
-        super(context, "img", maxCacheNumber, new BitmapSerializer(), fetcher);
+        super(context, DiskUsage.EXTERNAL, "img", maxCacheNumber, new BitmapSerializer(), fetcher);
     }
 }

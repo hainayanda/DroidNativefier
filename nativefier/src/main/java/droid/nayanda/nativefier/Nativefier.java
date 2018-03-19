@@ -23,18 +23,18 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
     private DiskCacheManager<TValue> diskCacheManager;
     private Fetcher<TValue> fetcher;
 
-    Nativefier(@NonNull Context context, @NonNull String containerName, int maxCacheNumber,
+    Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxCacheNumber,
                @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {
         if (maxCacheNumber < 2)
             throw new IllegalArgumentException("maxNumber minimum value is 2 : " + maxCacheNumber);
-        diskCacheManager = new DiskCacheManager<>(context, containerName, maxCacheNumber, serializer);
+        diskCacheManager = new DiskCacheManager<>(context, diskUsage, containerName, maxCacheNumber, serializer);
         memoryCacheManager = new MemoryCacheManager<>(maxCacheNumber / 2);
         this.fetcher = fetcher;
     }
 
-    Nativefier(@NonNull Context context, @NonNull String appVersion, @NonNull String containerName,
+    Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String appVersion, @NonNull String containerName,
                int maxCacheNumber, @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {
-        this(context, appVersion + "_" + containerName, maxCacheNumber, serializer, fetcher);
+        this(context, diskUsage, appVersion + "_" + containerName, maxCacheNumber, serializer, fetcher);
     }
 
     @Override

@@ -14,6 +14,7 @@ public class SerializableNativefierBuilder<TValue extends Serializable> {
     private int maxCacheNumber;
     private Fetcher<TValue> fetcher;
     private String appVersion;
+    private DiskUsage diskUsage;
 
     SerializableNativefierBuilder() {
     }
@@ -43,12 +44,17 @@ public class SerializableNativefierBuilder<TValue extends Serializable> {
         return this;
     }
 
+    public SerializableNativefierBuilder<TValue> setDiskUsage(@NonNull DiskUsage diskUsage) {
+        this.diskUsage = diskUsage;
+        return this;
+    }
+
     public Nativefier<TValue> createNativefier() throws IOException {
         if (context == null) throw new IllegalStateException("context cannot be null");
         if (containerName == null) throw new IllegalStateException("containerName cannot be null");
         if (appVersion != null)
-            return new SerializableNativefier<>(context, appVersion, containerName, maxCacheNumber, fetcher);
-        return new SerializableNativefier<>(context, containerName, maxCacheNumber, fetcher);
+            return new SerializableNativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, fetcher);
+        return new SerializableNativefier<>(context, diskUsage, containerName, maxCacheNumber, fetcher);
 
     }
 }

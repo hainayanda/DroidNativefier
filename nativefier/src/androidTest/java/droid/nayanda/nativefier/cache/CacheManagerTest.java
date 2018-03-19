@@ -13,8 +13,8 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 
+import droid.nayanda.nativefier.DiskUsage;
 import droid.nayanda.nativefier.Model;
-import droid.nayanda.nativefier.serializer.JsonSerializer;
 import droid.nayanda.nativefier.serializer.SerializableSerializer;
 
 import static org.junit.Assert.assertEquals;
@@ -32,7 +32,7 @@ public class CacheManagerTest {
     private static DiskCacheManager<Model> getDiskCacheManager() throws IOException {
         if (diskCacheManager == null) {
             Context appContext = InstrumentationRegistry.getTargetContext();
-            diskCacheManager = new DiskCacheManager<>(appContext, "test", 4, new SerializableSerializer<>());
+            diskCacheManager = new DiskCacheManager<>(appContext, DiskUsage.EXTERNAL, "test", 4, new SerializableSerializer<>());
         }
         return diskCacheManager;
     }

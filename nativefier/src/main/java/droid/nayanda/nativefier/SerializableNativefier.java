@@ -15,11 +15,11 @@ import droid.nayanda.nativefier.serializer.SerializableSerializer;
 
 class SerializableNativefier<TSerializable extends Serializable> extends Nativefier<TSerializable> {
 
-    SerializableNativefier(@NonNull Context context, @NonNull String containerName, int maxCacheNumber, Fetcher<TSerializable> fetcher) throws IOException {
-        super(context, containerName, maxCacheNumber, new SerializableSerializer<TSerializable>(), fetcher);
+    SerializableNativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxCacheNumber, Fetcher<TSerializable> fetcher) throws IOException {
+        super(context, diskUsage, containerName, maxCacheNumber, new SerializableSerializer<TSerializable>(), fetcher);
     }
 
-    SerializableNativefier(@NonNull Context context, @NonNull String appVersion, @NonNull String containerName, int maxCacheNumber, Fetcher<TSerializable> fetcher) throws IOException {
-        this(context, appVersion + "_" + containerName, maxCacheNumber, fetcher);
+    SerializableNativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String appVersion, @NonNull String containerName, int maxCacheNumber, Fetcher<TSerializable> fetcher) throws IOException {
+        this(context, diskUsage, appVersion + "_" + containerName, maxCacheNumber, fetcher);
     }
 }
