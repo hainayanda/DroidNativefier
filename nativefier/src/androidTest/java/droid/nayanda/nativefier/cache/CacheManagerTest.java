@@ -13,8 +13,8 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 
+import droid.nayanda.nativefier.CacheModel;
 import droid.nayanda.nativefier.DiskUsage;
-import droid.nayanda.nativefier.Model;
 import droid.nayanda.nativefier.serializer.SerializableSerializer;
 
 import static org.junit.Assert.assertEquals;
@@ -26,18 +26,18 @@ import static org.junit.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class CacheManagerTest {
 
-    private static DiskCacheManager<Model> diskCacheManager;
-    private static MemoryCacheManager<Model> memCacheManager;
+    private static DiskCacheManager<CacheModel> diskCacheManager;
+    private static MemoryCacheManager<CacheModel> memCacheManager;
 
-    private static DiskCacheManager<Model> getDiskCacheManager() throws IOException {
+    private static DiskCacheManager<CacheModel> getDiskCacheManager() throws IOException {
         if (diskCacheManager == null) {
             Context appContext = InstrumentationRegistry.getTargetContext();
-            diskCacheManager = new DiskCacheManager<>(appContext, DiskUsage.EXTERNAL, "test", 4, new SerializableSerializer<>());
+            diskCacheManager = new DiskCacheManager<>(appContext, DiskUsage.EXTERNAL, "manager", 4, new SerializableSerializer<>());
         }
         return diskCacheManager;
     }
 
-    private static MemoryCacheManager<Model> getMemCacheManager() throws IOException {
+    private static MemoryCacheManager<CacheModel> getMemCacheManager() throws IOException {
         if (memCacheManager == null) {
             memCacheManager = new MemoryCacheManager<>(2);
         }
@@ -46,23 +46,24 @@ public class CacheManagerTest {
 
     @Test
     public void diskTest() throws Exception {
-        Thread.sleep(1500);
+        getDiskCacheManager().clear();
+        Thread.sleep(5000);
         assertNull(getDiskCacheManager().get("1"));
-        Model one = new Model("one", 1, true);
-        Model two = new Model("two", 2, false);
-        Model three = new Model("three", 3, true);
+        CacheModel one = new CacheModel("one", 1, true);
+        CacheModel two = new CacheModel("two", 2, false);
+        CacheModel three = new CacheModel("three", 3, true);
         getDiskCacheManager().put("1", one);
         getDiskCacheManager().put("2", two);
         getDiskCacheManager().put("3", three);
-        Thread.sleep(1500);
+        Thread.sleep(5000);
         assertTrue(getDiskCacheManager().isExist("1"));
         assertTrue(getDiskCacheManager().isExist("2"));
         assertTrue(getDiskCacheManager().isExist("3"));
         assertFalse(getDiskCacheManager().isExist("4"));
-        Model getOne = getDiskCacheManager().get("1");
-        Model getTwo = getDiskCacheManager().get("2");
-        Model getThree = getDiskCacheManager().get("3");
-        Model getFour = getDiskCacheManager().get("4");
+        CacheModel getOne = getDiskCacheManager().get("1");
+        CacheModel getTwo = getDiskCacheManager().get("2");
+        CacheModel getThree = getDiskCacheManager().get("3");
+        CacheModel getFour = getDiskCacheManager().get("4");
         assertNotNull(getOne);
         assertNotNull(getTwo);
         assertNotNull(getThree);
@@ -75,21 +76,20 @@ public class CacheManagerTest {
 
     @Test
     public void memTest() throws Exception {
-        Thread.sleep(1500);
+        getMemCacheManager().clear();
         assertNull(getMemCacheManager().get("1"));
-        Model one = new Model("one", 1, true);
-        Model two = new Model("two", 2, false);
-        Model three = new Model("three", 3, true);
+        CacheModel one = new CacheModel("one", 1, true);
+        CacheModel two = new CacheModel("two", 2, false);
+        CacheModel three = new CacheModel("three", 3, true);
         getMemCacheManager().put("1", one);
         getMemCacheManager().put("2", two);
         getMemCacheManager().put("3", three);
-        Thread.sleep(1500);
         assertTrue(getMemCacheManager().isExist("1"));
         assertTrue(getMemCacheManager().isExist("2"));
         assertFalse(getMemCacheManager().isExist("3"));
-        Model getOne = getMemCacheManager().get("1");
-        Model getTwo = getMemCacheManager().get("2");
-        Model getThree = getMemCacheManager().get("3");
+        CacheModel getOne = getMemCacheManager().get("1");
+        CacheModel getTwo = getMemCacheManager().get("2");
+        CacheModel getThree = getMemCacheManager().get("3");
         assertNotNull(getOne);
         assertNotNull(getTwo);
         assertNull(getThree);

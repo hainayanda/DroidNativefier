@@ -13,10 +13,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.Set;
 
 import droid.nayanda.nativefier.DiskUsage;
 import droid.nayanda.nativefier.serializer.Serializer;
@@ -32,8 +29,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private Serializer<TValue> serializer;
     private int maxCacheNumber;
     private LinkedList<String> index;
-    private LinkedList<String> pendingRemoves = new LinkedList<>();
-    private LinkedHashMap<String, TValue> pendingPut = new LinkedHashMap<>();
+    private LinkedList<DiskTask> pendingDiskTasks = new LinkedList<>();
     private boolean isWriting = false;
     private boolean isIndexNeedUpdate = false;
 
@@ -127,8 +123,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             e.printStackTrace();
             index.remove(key);
             isIndexNeedUpdate = true;
-            if (pendingPut.containsKey(key)) pendingPut.remove(key);
-            pendingRemoves.add(key);
+            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
             writeAllPendingTask();
             return null;
         }
@@ -161,8 +156,9 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             index.remove(key);
             index.addFirst(key);
             isIndexNeedUpdate = true;
+            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, value)));
         }
-        pendingPut.put(key, value);
+        pendingDiskTasks.add(new DiskTask(TaskType.WRITE, new TaskPair(key, value)));
         writeAllPendingTask();
     }
 
@@ -170,12 +166,9 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         if (isWriting) return;
         isWriting = true;
         AsyncTask.execute(() -> {
-            while (pendingPut.size() > 0 || pendingRemoves.size() > 0 || isIndexNeedUpdate) {
-                if (pendingRemoves.size() > 0) {
-                    executePendingRemoves();
-                }
-                if (pendingPut.size() > 0) {
-                    executePendingPut();
+            while (pendingDiskTasks.size() > 0 || isIndexNeedUpdate) {
+                if (pendingDiskTasks.size() > 0) {
+                    executePendingDiskTask();
                 }
                 if (isIndexNeedUpdate) {
                     updateIndex();
@@ -185,6 +178,53 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         });
     }
 
+    private void executePendingDiskTask() {
+        Object[] pendingTasks = pendingDiskTasks.toArray();
+        pendingDiskTasks.clear();
+        for (Object obj : pendingTasks) {
+            DiskTask task = (DiskTask) obj;
+            switch (task.getType()) {
+                case INDEX:
+                    updateIndex();
+                    break;
+                case WRITE:
+                    putToDisk(task.getTask());
+                    break;
+                case DELETE:
+                    removeFromDisk(task.getTask().getFileName());
+                    break;
+            }
+        }
+    }
+
+    private void removeFromDisk(String fileName) {
+        File file = new File(directory, fileName + ".ch");
+        if (!file.exists()) return;
+        file.delete();
+    }
+
+    private void putToDisk(TaskPair task) {
+        FileOutputStream outputStream = null;
+        try {
+            File file = new File(directory, task.getFileName() + ".ch");
+            byte[] bytes = serializer.serialize(task.getObject());
+            if (!file.exists()) {
+                if (!file.createNewFile())
+                    throw new IOException("Failed to create new file : " + task.getFileName());
+            }
+            outputStream = new FileOutputStream(file.getAbsoluteFile());
+            outputStream.write(bytes);
+            outputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            if (outputStream != null) try {
+                outputStream.close();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
+    }
+
     private void updateIndex() {
         BufferedWriter writer = null;
         try {
@@ -192,7 +232,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                 if (!indexFile.createNewFile()) throw new IOException("Failed to create new file");
             }
             if(index.size() > 0) {
-                LinkedList<String> thisIndex = new LinkedList<>(index);
+                String[] thisIndex = index.toArray(new String[index.size()]);
                 isIndexNeedUpdate = false;
                 StringBuilder builder = new StringBuilder();
                 for (String line : thisIndex) {
@@ -212,48 +252,10 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         }
     }
 
-    private void executePendingPut() {
-        Set<Map.Entry<String, TValue>> puts = ((LinkedHashMap<String, TValue>) (pendingPut.clone())).entrySet();
-        pendingPut.clear();
-        for (Map.Entry<String, TValue> entry : puts) {
-            FileOutputStream outputStream = null;
-            try {
-                File file = new File(directory, entry.getKey() + ".ch");
-                byte[] bytes = serializer.serialize(entry.getValue());
-                if (!file.exists()) {
-                    if (!file.createNewFile())
-                        throw new IOException("Failed to create new file : " + entry.getKey());
-                }
-                outputStream = new FileOutputStream(file.getAbsoluteFile());
-                outputStream.write(bytes);
-                outputStream.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                if (outputStream != null) try {
-                    outputStream.close();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private void executePendingRemoves() {
-        LinkedList<String> removes = (LinkedList<String>) pendingRemoves.clone();
-        pendingRemoves.clear();
-        for (String remove : removes) {
-            File file = new File(directory, remove + ".ch");
-            if (!file.exists()) continue;
-            file.delete();
-        }
-
-    }
-
     @Override
     public void clear() {
         for (String key : index) {
-            pendingPut.remove(key);
-            pendingRemoves.add(key);
+            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
         }
         index.clear();
         isIndexNeedUpdate = true;
@@ -267,8 +269,47 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public void delete(@NonNull String key) {
-        pendingPut.remove(key);
-        pendingRemoves.add(key);
+        pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
         index.remove(key);
+    }
+
+    private enum TaskType {
+        WRITE, DELETE, INDEX
+    }
+
+    private class TaskPair {
+        private String fileName;
+        private TValue object;
+
+        TaskPair(String fileName, TValue object) {
+            this.fileName = fileName;
+            this.object = object;
+        }
+
+        String getFileName() {
+            return fileName;
+        }
+
+        TValue getObject() {
+            return object;
+        }
+    }
+
+    private class DiskTask {
+        private TaskType type;
+        private TaskPair task;
+
+        DiskTask(TaskType type, TaskPair task) {
+            this.type = type;
+            this.task = task;
+        }
+
+        TaskType getType() {
+            return type;
+        }
+
+        TaskPair getTask() {
+            return task;
+        }
     }
 }

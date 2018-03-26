@@ -6,7 +6,7 @@ import android.support.test.runner.AndroidJUnit4;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 /**
  * Created by nayanda on 19/03/18.
@@ -21,7 +21,7 @@ public class BitmapSerializerTest {
         Bitmap bmp = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
         byte[] bytes = serializer.serialize(bmp);
         Bitmap deBmp = serializer.deserialize(bytes);
-        assertEquals(bmp, deBmp);
+        assertTrue(bmp.sameAs(deBmp));
     }
 
 }
