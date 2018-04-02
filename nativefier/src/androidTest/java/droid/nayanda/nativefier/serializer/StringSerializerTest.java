@@ -24,12 +24,12 @@ public class StringSerializerTest {
     private class TestSerializer extends StringSerializer<String> {
 
         @Override
-        String serializeToString(@NonNull String obj) {
+        public String serializeToString(@NonNull String obj) {
             return obj;
         }
 
         @Override
-        String deserializeFromString(@NonNull String string) {
+        public String deserializeFromString(@NonNull String string) {
             return string;
         }
     }

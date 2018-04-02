@@ -10,9 +10,9 @@ import java.io.IOException;
 
 public abstract class StringSerializer<TValue> implements Serializer<TValue> {
 
-    abstract String serializeToString(@NonNull TValue obj);
+    public abstract String serializeToString(@NonNull TValue obj);
 
-    abstract TValue deserializeFromString(@NonNull String string);
+    public abstract TValue deserializeFromString(@NonNull String string);
 
     @Override
     public byte[] serialize(@NonNull TValue obj) throws IOException {

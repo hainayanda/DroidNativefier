@@ -1,6 +1,5 @@
 package droid.nayanda.nativefier.base;
 
-import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 
 /**
