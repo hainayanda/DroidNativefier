@@ -11,6 +11,7 @@ public class JsonNativefierBuilder<TJsonObj> {
     private Context context;
     private String containerName;
     private int maxCacheNumber = 50;
+    private int maxRamCacheNumber = 0;
     private Class<TJsonObj> jsonObjClass;
     private Fetcher<TJsonObj> fetcher;
     private String appVersion;
@@ -31,6 +32,11 @@ public class JsonNativefierBuilder<TJsonObj> {
 
     public JsonNativefierBuilder<TJsonObj> setMaxCacheNumber(int maxCacheNumber) {
         this.maxCacheNumber = maxCacheNumber;
+        return this;
+    }
+
+    public JsonNativefierBuilder<TJsonObj> setMaxRamCacheNumber(int maxCacheNumber) {
+        this.maxRamCacheNumber = maxCacheNumber;
         return this;
     }
 
@@ -58,8 +64,17 @@ public class JsonNativefierBuilder<TJsonObj> {
         if (context == null) throw new IllegalStateException("context cannot be null");
         if (containerName == null) throw new IllegalStateException("containerName cannot be null");
         if (jsonObjClass == null) throw new IllegalStateException("jsonObjClass cannot be null");
-        if (appVersion != null)
-            return new JsonNativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, jsonObjClass, fetcher);
-        return new JsonNativefier<>(context, diskUsage, containerName, maxCacheNumber, jsonObjClass, fetcher);
+        if (appVersion != null) {
+            if (maxRamCacheNumber <= 0)
+                return new JsonNativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, jsonObjClass, fetcher);
+            else
+                return new JsonNativefier<>(context, diskUsage, appVersion, containerName, maxRamCacheNumber, maxCacheNumber, jsonObjClass, fetcher);
+
+        } else {
+            if (maxRamCacheNumber <= 0)
+                return new JsonNativefier<>(context, diskUsage, containerName, maxCacheNumber, jsonObjClass, fetcher);
+            else
+                return new JsonNativefier<>(context, diskUsage, containerName, maxRamCacheNumber, maxCacheNumber, jsonObjClass, fetcher);
+        }
     }
 }

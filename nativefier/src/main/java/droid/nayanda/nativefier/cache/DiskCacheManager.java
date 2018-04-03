@@ -198,9 +198,6 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         while (iterator.hasNext()) {
             DiskTask task = iterator.next();
             switch (task.getType()) {
-                case INDEX:
-                    updateIndex();
-                    break;
                 case WRITE:
                     putToDisk(task.getTask());
                     break;
@@ -270,6 +267,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public void clear() {
+        pendingDiskTasks.clear();
         for (String key : index) {
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
         }
@@ -286,11 +284,18 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     @Override
     public void delete(@NonNull String key) {
         pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
+        Iterator<DiskTask> iterator = pendingDiskTasks.iterator();
         index.remove(key);
+        while (iterator.hasNext()) {
+            DiskTask task = iterator.next();
+            if (task.getType() == TaskType.WRITE) {
+                if (task.getTask().fileName.equals(key)) iterator.remove();
+            }
+        }
     }
 
     private enum TaskType {
-        WRITE, DELETE, INDEX
+        WRITE, DELETE
     }
 
     private class TaskPair {

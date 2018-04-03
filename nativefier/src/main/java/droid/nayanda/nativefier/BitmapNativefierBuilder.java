@@ -11,6 +11,7 @@ import droid.nayanda.nativefier.base.Fetcher;
 public class BitmapNativefierBuilder {
     private Context context;
     private int maxCacheNumber = 50;
+    private int maxRamCacheNumber = 0;
     private Fetcher<Bitmap> fetcher = null;
 
     BitmapNativefierBuilder() {
@@ -26,6 +27,11 @@ public class BitmapNativefierBuilder {
         return this;
     }
 
+    public BitmapNativefierBuilder setMaxRamCacheNumber(int maxCacheNumber) {
+        this.maxRamCacheNumber = maxCacheNumber;
+        return this;
+    }
+
     public BitmapNativefierBuilder setFetcher(@NonNull Fetcher<Bitmap> fetcher) {
         this.fetcher = fetcher;
         return this;
@@ -33,6 +39,9 @@ public class BitmapNativefierBuilder {
 
     public Nativefier<Bitmap> createNativefier() throws IOException {
         if (context == null) throw new IllegalStateException("context cannot be null");
-        return new BitmapNativefier(context, maxCacheNumber, fetcher);
+        if (maxRamCacheNumber <= 0)
+            return new BitmapNativefier(context, maxCacheNumber, fetcher);
+        else
+            return new BitmapNativefier(context, maxRamCacheNumber, maxCacheNumber, fetcher);
     }
 }

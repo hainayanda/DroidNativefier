@@ -23,4 +23,14 @@ class JsonNativefier<TJsonObj> extends Nativefier<TJsonObj> {
                    int maxCacheNumber, @NonNull Class<TJsonObj> jsonObjClass, Fetcher<TJsonObj> fetcher) throws IOException {
         this(context, diskUsage, appVersion + "_" + containerName, maxCacheNumber, jsonObjClass, fetcher);
     }
+
+    JsonNativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxRamCacheNumber,
+                   int maxDiskCacheNumber, @NonNull Class<TJsonObj> jsonObjClass, Fetcher<TJsonObj> fetcher) throws IOException {
+        super(context, diskUsage, containerName, maxRamCacheNumber, maxDiskCacheNumber, new JsonSerializer<>(jsonObjClass), fetcher);
+    }
+
+    JsonNativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String appVersion, @NonNull String containerName,
+                   int maxRamCacheNumber, int maxDiskCacheNumber, @NonNull Class<TJsonObj> jsonObjClass, Fetcher<TJsonObj> fetcher) throws IOException {
+        this(context, diskUsage, appVersion + "_" + containerName, maxRamCacheNumber, maxDiskCacheNumber, jsonObjClass, fetcher);
+    }
 }

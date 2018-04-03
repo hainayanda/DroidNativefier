@@ -23,18 +23,28 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
     private DiskCacheManager<TValue> diskCacheManager;
     private Fetcher<TValue> fetcher;
 
+    Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxRamCacheNumber, int maxDiskCacheNumber,
+               @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {
+        if (maxRamCacheNumber < 2 || maxDiskCacheNumber < 2)
+            throw new IllegalArgumentException("maxNumber minimum value is 2");
+        diskCacheManager = new DiskCacheManager<>(context, diskUsage, containerName, maxDiskCacheNumber, serializer);
+        memoryCacheManager = new MemoryCacheManager<>(maxRamCacheNumber);
+        this.fetcher = fetcher;
+    }
+
     Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxCacheNumber,
                @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {
-        if (maxCacheNumber < 2)
-            throw new IllegalArgumentException("maxNumber minimum value is 2 : " + maxCacheNumber);
-        diskCacheManager = new DiskCacheManager<>(context, diskUsage, containerName, maxCacheNumber, serializer);
-        memoryCacheManager = new MemoryCacheManager<>(maxCacheNumber / 2);
-        this.fetcher = fetcher;
+        this(context, diskUsage, containerName, maxCacheNumber / 2, maxCacheNumber, serializer, fetcher);
     }
 
     Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String appVersion, @NonNull String containerName,
                int maxCacheNumber, @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {
         this(context, diskUsage, appVersion + "_" + containerName, maxCacheNumber, serializer, fetcher);
+    }
+
+    Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String appVersion, @NonNull String containerName,
+               int maxRamCacheNumber, int maxDiskCacheNumber, @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {
+        this(context, diskUsage, appVersion + "_" + containerName, maxRamCacheNumber, maxDiskCacheNumber, serializer, fetcher);
     }
 
     @Override

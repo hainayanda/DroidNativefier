@@ -12,6 +12,7 @@ public class NativefierBuilder<TValue> {
     private Context context;
     private String containerName;
     private int maxCacheNumber = 50;
+    private int maxRamCacheNumber = 0;
     private Serializer<TValue> serializer;
     private Fetcher<TValue> fetcher = null;
     private String appVersion;
@@ -32,6 +33,11 @@ public class NativefierBuilder<TValue> {
 
     public NativefierBuilder<TValue> setMaxCacheNumber(int maxCacheNumber) {
         this.maxCacheNumber = maxCacheNumber;
+        return this;
+    }
+
+    public NativefierBuilder<TValue> setMaxRamCacheNumber(int maxRamCacheNumber) {
+        this.maxRamCacheNumber = maxRamCacheNumber;
         return this;
     }
 
@@ -59,9 +65,16 @@ public class NativefierBuilder<TValue> {
         if (context == null) throw new IllegalStateException("context cannot be null");
         if (containerName == null) throw new IllegalStateException("containerName cannot be null");
         if (serializer == null) throw new IllegalStateException("serializer cannot be null");
-        if (appVersion == null)
-            return new Nativefier<>(context, diskUsage, containerName, maxCacheNumber, serializer, fetcher);
-        else
-            return new Nativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, serializer, fetcher);
+        if (appVersion == null) {
+            if (maxRamCacheNumber <= 0)
+                return new Nativefier<>(context, diskUsage, containerName, maxCacheNumber, serializer, fetcher);
+            else
+                return new Nativefier<>(context, diskUsage, containerName, maxRamCacheNumber, maxCacheNumber, serializer, fetcher);
+        } else {
+            if (maxRamCacheNumber <= 0)
+                return new Nativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, serializer, fetcher);
+            else
+                return new Nativefier<>(context, diskUsage, appVersion, containerName, maxRamCacheNumber, maxCacheNumber, serializer, fetcher);
+        }
     }
 }

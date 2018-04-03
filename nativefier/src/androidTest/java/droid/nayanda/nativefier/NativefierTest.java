@@ -28,7 +28,8 @@ public class NativefierTest {
         if(nativefier == null) {
             Context appContext = InstrumentationRegistry.getTargetContext();
             nativefier = Builder.<Model>getJsonNativefier().setContext(appContext).setContainerName("model")
-                    .setMaxCacheNumber(4).setJsonObjClass(Model.class)
+                    .setMaxCacheNumber(4).setMaxRamCacheNumber(2)
+                    .setJsonObjClass(Model.class)
                     .setFetcher(new SimpleFetcher<Model>() {
                         @Override
                         public Model fetch(@NonNull String key) {
@@ -43,7 +44,6 @@ public class NativefierTest {
     @Test
     public void syncTest() throws Exception {
         getNativefier().clear();
-        Thread.sleep(1500);
         assertNull(getNativefier().get("1"));
         Model one = new Model("one", 1, true);
         Model two = new Model("two", 2, false);
@@ -51,7 +51,6 @@ public class NativefierTest {
         getNativefier().put("1", one);
         getNativefier().put("2", two);
         getNativefier().put("3", three);
-        Thread.sleep(1500);
         assertTrue(getNativefier().isExist("1"));
         assertTrue(getNativefier().isExist("2"));
         assertTrue(getNativefier().isExist("3"));
@@ -73,7 +72,6 @@ public class NativefierTest {
     @Test
     public void asyncTest() throws Exception {
         getNativefier().clear();
-        Thread.sleep(1500);
         assertFalse(getNativefier().isExist("fetch"));
         assertNull(getNativefier().get("fetch"));
         Model dummy = new Model("fetch", 100, true);
@@ -82,7 +80,6 @@ public class NativefierTest {
         assertTrue(getNativefier().isExist("fetch"));
         CountDownLatch latch = new CountDownLatch(1);
         getNativefier().clear();
-        Thread.sleep(1500);
         assertFalse(getNativefier().isExist("fetch"));
         assertNull(getNativefier().get("fetch"));
         getNativefier().asyncGet("fetch", model -> {

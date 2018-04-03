@@ -17,4 +17,8 @@ class BitmapNativefier extends Nativefier<Bitmap> {
     BitmapNativefier(Context context, int maxCacheNumber, Fetcher<Bitmap> fetcher) throws IOException {
         super(context, DiskUsage.EXTERNAL, "img", maxCacheNumber, new BitmapSerializer(), fetcher);
     }
+
+    BitmapNativefier(Context context, int maxRamCacheNumber, int maxDiskCacheNumber, Fetcher<Bitmap> fetcher) throws IOException {
+        super(context, DiskUsage.EXTERNAL, "img", maxRamCacheNumber, maxDiskCacheNumber, new BitmapSerializer(), fetcher);
+    }
 }

@@ -12,6 +12,7 @@ public class SerializableNativefierBuilder<TValue extends Serializable> {
     private Context context;
     private String containerName;
     private int maxCacheNumber;
+    private int maxRamCacheNumber;
     private Fetcher<TValue> fetcher;
     private String appVersion;
     private DiskUsage diskUsage = DiskUsage.EXTERNAL;
@@ -34,6 +35,11 @@ public class SerializableNativefierBuilder<TValue extends Serializable> {
         return this;
     }
 
+    public SerializableNativefierBuilder<TValue> setMaxRamCacheNumber(int maxRamCacheNumber) {
+        this.maxRamCacheNumber = maxRamCacheNumber;
+        return this;
+    }
+
     public SerializableNativefierBuilder<TValue> setFetcher(@NonNull Fetcher<TValue> fetcher) {
         this.fetcher = fetcher;
         return this;
@@ -52,9 +58,17 @@ public class SerializableNativefierBuilder<TValue extends Serializable> {
     public Nativefier<TValue> createNativefier() throws IOException {
         if (context == null) throw new IllegalStateException("context cannot be null");
         if (containerName == null) throw new IllegalStateException("containerName cannot be null");
-        if (appVersion != null)
-            return new SerializableNativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, fetcher);
-        return new SerializableNativefier<>(context, diskUsage, containerName, maxCacheNumber, fetcher);
+        if (appVersion != null) {
+            if (maxRamCacheNumber <= 0)
+                return new SerializableNativefier<>(context, diskUsage, appVersion, containerName, maxCacheNumber, fetcher);
+            else
+                return new SerializableNativefier<>(context, diskUsage, appVersion, containerName, maxRamCacheNumber, maxCacheNumber, fetcher);
+        } else {
+            if (maxRamCacheNumber <= 0)
+                return new SerializableNativefier<>(context, diskUsage, containerName, maxCacheNumber, fetcher);
+            else
+                return new SerializableNativefier<>(context, diskUsage, containerName, maxRamCacheNumber, maxCacheNumber, fetcher);
+        }
 
     }
 }

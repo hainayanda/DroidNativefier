@@ -47,7 +47,6 @@ public class CacheManagerTest {
     @Test
     public void diskTest() throws Exception {
         getDiskCacheManager().clear();
-        Thread.sleep(5000);
         assertNull(getDiskCacheManager().get("1"));
         CacheModel one = new CacheModel("one", 1, true);
         CacheModel two = new CacheModel("two", 2, false);
@@ -55,7 +54,6 @@ public class CacheManagerTest {
         getDiskCacheManager().put("1", one);
         getDiskCacheManager().put("2", two);
         getDiskCacheManager().put("3", three);
-        Thread.sleep(5000);
         assertTrue(getDiskCacheManager().isExist("1"));
         assertTrue(getDiskCacheManager().isExist("2"));
         assertTrue(getDiskCacheManager().isExist("3"));
