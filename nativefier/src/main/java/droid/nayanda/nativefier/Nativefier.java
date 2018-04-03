@@ -21,10 +21,10 @@ import droid.nayanda.nativefier.serializer.Serializer;
 
 public class Nativefier<TValue> implements CacheManager<TValue> {
 
-    private MemoryCacheManager<TValue> memoryCacheManager;
-    private DiskCacheManager<TValue> diskCacheManager;
-    private Fetcher<TValue> fetcher;
-    private Context context;
+    private final MemoryCacheManager<TValue> memoryCacheManager;
+    private final DiskCacheManager<TValue> diskCacheManager;
+    private final Fetcher<TValue> fetcher;
+    private final Context context;
 
     Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxRamCacheNumber, int maxDiskCacheNumber,
                @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {

@@ -17,6 +17,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import droid.nayanda.nativefier.DiskUsage;
 import droid.nayanda.nativefier.serializer.Serializer;
@@ -35,8 +38,8 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private final Serializer<TValue> serializer;
     private final int maxCacheNumber;
     private final Context context;
-    private boolean isWriting = false;
-    private boolean isIndexNeedUpdate = false;
+    private final AtomicBoolean isWriting = new AtomicBoolean(false);
+    private final AtomicReference<AsyncUpdate> asyncUpdater = new AtomicReference<>();
 
     public DiskCacheManager(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
         this.context = context;
@@ -137,7 +140,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         } catch (Exception e) {
             Log.e("Nativiefier Error", e.getMessage());
             index.remove(key);
-            isIndexNeedUpdate = true;
+            updateIndex();
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
             writeAllPendingTask();
             return null;
@@ -189,19 +192,14 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     }
 
     private void writeAllPendingTask() {
-        if (isWriting) return;
-        isWriting = true;
+        if (isWriting.get()) return;
+        isWriting.set(true);
         Handler uiHandler = new Handler(context.getMainLooper());
         uiHandler.post(() -> AsyncTask.execute(() -> {
-            while (pendingDiskTasks.size() > 0 || isIndexNeedUpdate) {
-                if (pendingDiskTasks.size() > 0) {
-                    executePendingDiskTask();
-                }
-                if (isIndexNeedUpdate) {
-                    updateIndex();
-                }
+            while (pendingDiskTasks.size() > 0) {
+                executePendingDiskTask();
             }
-            isWriting = false;
+            isWriting.set(false);
         }));
     }
 
@@ -249,31 +247,26 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     }
 
     private void updateIndex() {
-        BufferedWriter writer = null;
-        try {
-            if (!indexFile.exists()) {
-                if (!indexFile.createNewFile()) throw new IOException("Failed to create new file");
-            }
-            if (index.size() > 0) {
-                String[] thisIndex = index.toArray(new String[index.size()]);
-                isIndexNeedUpdate = false;
-                StringBuilder builder = new StringBuilder();
-                for (String line : thisIndex) {
-                    builder.append(line).append('\n');
-                }
-                writer = new BufferedWriter(new FileWriter(indexFile.getAbsoluteFile()));
-                writer.write(builder.toString());
-                writer.close();
-            } else isIndexNeedUpdate = false;
-        } catch (Exception e) {
-            Log.e("Nativiefier Error", e.getMessage());
-            e.printStackTrace();
-            if (writer != null) try {
-                writer.close();
-            } catch (IOException e1) {
-                Log.e("Nativiefier Error", e1.getMessage());
+        AsyncUpdate updater = asyncUpdater.get();
+        if (updater == null) {
+            updater = new AsyncUpdate();
+            updater.execute();
+            asyncUpdater.set(updater);
+        } else if (updater.getStatus() == AsyncTask.Status.FINISHED) {
+            updater = new AsyncUpdate();
+            updater.execute();
+            asyncUpdater.set(updater);
+        } else {
+            try {
+                updater.get();
+                updater = new AsyncUpdate();
+                updater.execute();
+                asyncUpdater.set(updater);
+            } catch (InterruptedException | ExecutionException e) {
+                Log.e("Nativefier Error", e.getMessage());
             }
         }
+
     }
 
     @Override
@@ -284,7 +277,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
             key = index.poll();
         }
-        isIndexNeedUpdate = true;
+        updateIndex();
         writeAllPendingTask();
     }
 
@@ -297,7 +290,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     public void delete(@NonNull String key) {
         pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
         index.remove(key);
-        isIndexNeedUpdate = true;
+        updateIndex();
         writeAllPendingTask();
     }
 
@@ -306,8 +299,8 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         index.offer(key);
         while (index.size() > maxCacheNumber) {
             index.poll();
-            isIndexNeedUpdate = true;
         }
+        updateIndex();
         writeAllPendingTask();
     }
 
@@ -348,6 +341,39 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
         TaskPair getTask() {
             return task;
+        }
+    }
+
+    class AsyncUpdate extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            BufferedWriter writer = null;
+            try {
+                if (!indexFile.exists()) {
+                    if (!indexFile.createNewFile())
+                        throw new IOException("Failed to create new file");
+                }
+                if (index.size() >= 0) {
+                    String[] thisIndex = index.toArray(new String[index.size()]);
+                    StringBuilder builder = new StringBuilder();
+                    for (String line : thisIndex) {
+                        builder.append(line).append('\n');
+                    }
+                    writer = new BufferedWriter(new FileWriter(indexFile.getAbsoluteFile()));
+                    writer.write(builder.toString());
+                    writer.close();
+                }
+            } catch (Exception e) {
+                Log.e("Nativiefier Error", e.getMessage());
+                e.printStackTrace();
+                if (writer != null) try {
+                    writer.close();
+                } catch (IOException e1) {
+                    Log.e("Nativiefier Error", e1.getMessage());
+                }
+            }
+            return null;
         }
     }
 
