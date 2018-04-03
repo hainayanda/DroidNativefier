@@ -1,6 +1,7 @@
 package droid.nayanda.nativefier.base;
 
 import android.content.Context;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 
@@ -21,7 +22,7 @@ public abstract class SimpleFetcher<TValue> implements Fetcher<TValue> {
         Handler uiHandler = new Handler(context.getMainLooper());
         uiHandler.post(() -> {
             FetcherTask<TValue> task = new FetcherTask<>(SimpleFetcher.this::fetch, finisher);
-            task.execute(key);
+            task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, key);
         });
     }
 }
