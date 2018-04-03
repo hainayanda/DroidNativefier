@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 import droid.nayanda.nativefier.DiskUsage;
 import droid.nayanda.nativefier.serializer.Serializer;
@@ -33,6 +34,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private Serializer<TValue> serializer;
     private int maxCacheNumber;
     private LinkedList<String> index;
+    private ConcurrentHashMap<File, AsyncReader> readingTask = new ConcurrentHashMap<>();
     private Vector<DiskTask> pendingDiskTasks = new Vector<>();
     private boolean isWriting = false;
     private boolean isIndexNeedUpdate = false;
@@ -61,25 +63,6 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         this.maxCacheNumber = maxCacheNumber;
     }
 
-    private static byte[] readFileToBytes(File file) {
-        FileInputStream inputStream = null;
-        try {
-            byte[] bytes = new byte[(int) file.length()];
-            inputStream = new FileInputStream(file);
-            inputStream.read(bytes);
-            inputStream.close();
-            return bytes;
-        } catch (IOException e) {
-            e.printStackTrace();
-            if (inputStream != null) try {
-                inputStream.close();
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
-            return new byte[0];
-        }
-    }
-
     private static <T> LinkedList<T> linkedListCopier(LinkedList<T> list) {
         LinkedList<T> copy = new LinkedList<>();
         Iterator<T> iterator = list.iterator();
@@ -87,6 +70,24 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             copy.add(iterator.next());
         }
         return copy;
+    }
+
+    private byte[] readFileToBytes(File file) {
+        InputStream inputStream = null;
+        try {
+            byte[] bytes = new byte[(int) file.length()];
+            inputStream = new FileInputStream(file);
+            inputStream.read(bytes);
+            return bytes;
+        } catch (IOException e) {
+            e.printStackTrace();
+            if (inputStream != null) try {
+                inputStream.close();
+            } catch (IOException e1) {
+                Log.e("Nativefier Error", e1.getMessage());
+            }
+            return new byte[0];
+        }
     }
 
     @Override
@@ -97,8 +98,9 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private LinkedList<String> readFileToList(File file) {
         BufferedReader reader = null;
         LinkedList<String> strings = new LinkedList<>();
+        InputStream inputStream = null;
         try {
-            InputStream inputStream = new FileInputStream(file.getAbsoluteFile());
+            inputStream = new FileInputStream(file.getAbsoluteFile());
             reader = new BufferedReader(new InputStreamReader(inputStream));
             String line = reader.readLine();
             while (line != null) {
@@ -112,6 +114,11 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                 reader.close();
             } catch (IOException e1) {
                 Log.e("Nativiefier Error", e1.getMessage());
+            }
+            if (inputStream != null) try {
+                inputStream.close();
+            } catch (IOException e1) {
+                Log.e("Nativefier Error", e1.getMessage());
             }
         }
         return strings;
@@ -132,16 +139,12 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                 }
             }
             removeIndex(key);
-            isIndexNeedUpdate = true;
-            writeAllPendingTask();
             return null;
         }
         try {
             TValue obj = deserializeFile(file);
             removeIndex(key);
             addFirstAndRemoveIfNecessaryForIndex(key);
-            isIndexNeedUpdate = true;
-            writeAllPendingTask();
             return obj;
         } catch (Exception e) {
             Log.e("Nativiefier Error", e.getMessage());
@@ -155,8 +158,31 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     }
 
     private TValue deserializeFile(File file) throws IOException, ClassNotFoundException {
-        byte[] bytes = readFileToBytes(file);
-        return serializer.deserialize(bytes);
+        if (readingTask.containsKey(file)) {
+            AsyncReader reader = readingTask.get(file);
+            try {
+                if (reader.getStatus() == AsyncTask.Status.FINISHED) return reader.get();
+                reader.wait();
+                return reader.get();
+            } catch (Exception e) {
+                Log.e("Nativefier Error", e.getMessage());
+                return null;
+            }
+        } else {
+            try {
+                AsyncReader reader = new AsyncReader();
+                readingTask.put(file, reader);
+                Handler uiHandler = new Handler(context.getMainLooper());
+                uiHandler.post(() -> reader.execute(file));
+                reader.wait();
+                readingTask.remove(file);
+                return reader.get();
+            } catch (Exception e) {
+                Log.e("Nativefier Error", e.getMessage());
+                if (readingTask.containsKey(file)) readingTask.remove(file);
+                return null;
+            }
+        }
     }
 
     @Override
@@ -166,7 +192,6 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         } else {
             removeIndex(key);
             addFirstAndRemoveIfNecessaryForIndex(key);
-            isIndexNeedUpdate = true;
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, value)));
         }
         pendingDiskTasks.add(new DiskTask(TaskType.WRITE, new TaskPair(key, value)));
@@ -289,24 +314,26 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                 if (task.getTask().fileName.equals(key)) iterator.remove();
             }
         }
+        writeAllPendingTask();
     }
 
     private void addFirstAndRemoveIfNecessaryForIndex(String key) {
         LinkedList<String> indexCopy = linkedListCopier(index);
         indexCopy.addFirst(key);
-        boolean isIndexNeedUpdate = false;
         while (indexCopy.size() > maxCacheNumber) {
             indexCopy.pop();
             isIndexNeedUpdate = true;
         }
         index = indexCopy;
-        if (isIndexNeedUpdate) writeAllPendingTask();
+        writeAllPendingTask();
     }
 
     private void removeIndex(String key) {
         LinkedList<String> indexCopy = linkedListCopier(index);
         indexCopy.remove(key);
         index = indexCopy;
+        isIndexNeedUpdate = true;
+        writeAllPendingTask();
     }
 
     private enum TaskType {
@@ -346,6 +373,20 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
         TaskPair getTask() {
             return task;
+        }
+    }
+
+    class AsyncReader extends AsyncTask<File, Void, TValue> {
+
+        @Override
+        protected TValue doInBackground(File... files) {
+            try {
+                byte[] bytes = readFileToBytes(files[0]);
+                return serializer.deserialize(bytes);
+            } catch (IOException | ClassNotFoundException e) {
+                Log.e("Nativifier Error", e.getMessage());
+                return null;
+            }
         }
     }
 }
