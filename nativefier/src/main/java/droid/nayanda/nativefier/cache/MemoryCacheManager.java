@@ -48,9 +48,7 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public void clear() {
-        synchronized (lruCache) {
-            lruCache.clear();
-        }
+        lruCache.clear();
     }
 
     @Override
