@@ -30,7 +30,7 @@ public class NativefierTest {
             nativefier = Builder.<Model>getJsonNativefier().setContext(appContext).setContainerName("model")
                     .setMaxCacheNumber(4).setMaxRamCacheNumber(2)
                     .setJsonObjClass(Model.class)
-                    .setFetcher(new SimpleFetcher<Model>() {
+                    .setFetcher(new SimpleFetcher<Model>(appContext) {
                         @Override
                         public Model fetch(@NonNull String key) {
                             if (key.equals("fetch")) return new Model("fetch", 100, true);

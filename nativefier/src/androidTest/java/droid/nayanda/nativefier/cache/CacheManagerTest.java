@@ -39,60 +39,61 @@ public class CacheManagerTest {
 
     private static MemoryCacheManager<CacheModel> getMemCacheManager() throws IOException {
         if (memCacheManager == null) {
-            memCacheManager = new MemoryCacheManager<>(2);
+            memCacheManager = new MemoryCacheManager<>(4);
         }
         return memCacheManager;
     }
 
     @Test
     public void diskTest() throws Exception {
-        getDiskCacheManager().clear();
-        assertNull(getDiskCacheManager().get("1"));
-        CacheModel one = new CacheModel("one", 1, true);
-        CacheModel two = new CacheModel("two", 2, false);
-        CacheModel three = new CacheModel("three", 3, true);
-        getDiskCacheManager().put("1", one);
-        getDiskCacheManager().put("2", two);
-        getDiskCacheManager().put("3", three);
-        assertTrue(getDiskCacheManager().isExist("1"));
-        assertTrue(getDiskCacheManager().isExist("2"));
-        assertTrue(getDiskCacheManager().isExist("3"));
-        assertFalse(getDiskCacheManager().isExist("4"));
-        CacheModel getOne = getDiskCacheManager().get("1");
-        CacheModel getTwo = getDiskCacheManager().get("2");
-        CacheModel getThree = getDiskCacheManager().get("3");
-        CacheModel getFour = getDiskCacheManager().get("4");
-        assertNotNull(getOne);
-        assertNotNull(getTwo);
-        assertNotNull(getThree);
-        assertNull(getFour);
-        assertEquals(one, getOne);
-        assertEquals(two, getTwo);
-        assertEquals(three, getThree);
-        getDiskCacheManager().clear();
+        baseTest(getDiskCacheManager());
     }
 
     @Test
     public void memTest() throws Exception {
-        getMemCacheManager().clear();
-        assertNull(getMemCacheManager().get("1"));
+        baseTest(getMemCacheManager());
+    }
+
+    private void baseTest(CacheManager<CacheModel> cacheManager) throws IOException {
+        cacheManager.clear();
+        assertNull(cacheManager.get("1"));
         CacheModel one = new CacheModel("one", 1, true);
         CacheModel two = new CacheModel("two", 2, false);
         CacheModel three = new CacheModel("three", 3, true);
-        getMemCacheManager().put("1", one);
-        getMemCacheManager().put("2", two);
-        getMemCacheManager().put("3", three);
-        assertTrue(getMemCacheManager().isExist("1"));
-        assertTrue(getMemCacheManager().isExist("2"));
-        assertFalse(getMemCacheManager().isExist("3"));
-        CacheModel getOne = getMemCacheManager().get("1");
-        CacheModel getTwo = getMemCacheManager().get("2");
-        CacheModel getThree = getMemCacheManager().get("3");
-        assertNotNull(getOne);
-        assertNotNull(getTwo);
-        assertNull(getThree);
-        assertEquals(one, getOne);
-        assertEquals(two, getTwo);
-        getMemCacheManager().clear();
+        CacheModel four = new CacheModel("four", 4, true);
+        CacheModel five = new CacheModel("five", 5, false);
+        CacheModel six = new CacheModel("six", 6, true);
+        cacheManager.put("1", one);
+        cacheManager.put("2", two);
+        cacheManager.put("3", three);
+        cacheManager.put("4", four);
+        cacheManager.put("5", five);
+        cacheManager.put("6", six);
+        assertFalse(cacheManager.isExist("1"));
+        assertFalse(cacheManager.isExist("2"));
+        assertTrue(cacheManager.isExist("3"));
+        assertTrue(cacheManager.isExist("4"));
+        assertTrue(cacheManager.isExist("5"));
+        assertTrue(cacheManager.isExist("6"));
+        assertFalse(cacheManager.isExist("7"));
+        CacheModel getOne = cacheManager.get("1");
+        CacheModel getTwo = cacheManager.get("2");
+        CacheModel getThree = cacheManager.get("3");
+        CacheModel getFour = cacheManager.get("4");
+        CacheModel getFive = cacheManager.get("5");
+        CacheModel getSix = cacheManager.get("6");
+        CacheModel getSeven = cacheManager.get("7");
+        assertNull(getOne);
+        assertNull(getTwo);
+        assertNotNull(getThree);
+        assertNotNull(getFour);
+        assertNotNull(getFive);
+        assertNotNull(getSix);
+        assertNull(getSeven);
+        assertEquals(three, getThree);
+        assertEquals(four, getFour);
+        assertEquals(five, getFive);
+        assertEquals(six, getSix);
+        cacheManager.clear();
     }
 }

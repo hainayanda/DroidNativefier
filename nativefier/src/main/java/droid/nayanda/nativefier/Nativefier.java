@@ -1,7 +1,9 @@
 package droid.nayanda.nativefier;
 
 import android.content.Context;
+import android.os.Handler;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import java.io.IOException;
 
@@ -22,6 +24,7 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
     private MemoryCacheManager<TValue> memoryCacheManager;
     private DiskCacheManager<TValue> diskCacheManager;
     private Fetcher<TValue> fetcher;
+    private Context context;
 
     Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxRamCacheNumber, int maxDiskCacheNumber,
                @NonNull Serializer<TValue> serializer, Fetcher<TValue> fetcher) throws IOException {
@@ -30,6 +33,7 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
         diskCacheManager = new DiskCacheManager<>(context, diskUsage, containerName, maxDiskCacheNumber, serializer);
         memoryCacheManager = new MemoryCacheManager<>(maxRamCacheNumber);
         this.fetcher = fetcher;
+        this.context = context;
     }
 
     Nativefier(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxCacheNumber,
@@ -77,18 +81,27 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
     public void asyncGet(@NonNull String key, final Finisher<TValue> finisher) {
         final TValue obj = get(key);
         if (obj == null && fetcher != null) {
-            fetcher.asyncFetch(key,
+            Handler uiHandler = new Handler(context.getMainLooper());
+            uiHandler.post(() -> fetcher.asyncFetch(key,
                     new ArgumentsFinisher<TValue, Object>(finisher, key, memoryCacheManager, diskCacheManager) {
                         @Override
-                        public void onFinished(TValue obj, Object[] args) {
-                            if (obj != null) {
-                                ((CacheManager<TValue>) args[2]).put((String) args[1], obj);
-                                ((CacheManager<TValue>) args[3]).put((String) args[1], obj);
+                        public void onFinished(TValue obj1, Object[] args) {
+                            if (obj1 != null) {
+                                ((CacheManager<TValue>) args[2]).put((String) args[1], obj1);
+                                ((CacheManager<TValue>) args[3]).put((String) args[1], obj1);
                             }
-                            ((Finisher<TValue>) args[0]).onFinished(obj);
+                            try {
+                                ((Finisher<TValue>) args[0]).onFinished(obj1);
+                            } catch (Exception e) {
+                                Log.e("Nativefier Error", e.getMessage());
+                            }
                         }
-            });
-        } else finisher.onFinished(obj);
+                    }));
+        } else try {
+            finisher.onFinished(obj);
+        } catch (Exception e) {
+            Log.e("Nativefier Error", e.getMessage());
+        }
     }
 
     @Override
