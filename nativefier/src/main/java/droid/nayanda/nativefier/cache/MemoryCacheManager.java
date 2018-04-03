@@ -2,6 +2,7 @@ package droid.nayanda.nativefier.cache;
 
 import android.support.annotation.NonNull;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 
 /**
@@ -10,11 +11,20 @@ import java.util.LinkedList;
 
 public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
 
-    private final LinkedList<Entry> lruCache = new LinkedList<>();
     private final int maxCacheNumber;
+    private LinkedList<Entry> lruCache = new LinkedList<>();
 
     public MemoryCacheManager(int maxCacheNumber) {
         this.maxCacheNumber = maxCacheNumber;
+    }
+
+    private static <T> LinkedList<T> linkedListCopier(LinkedList<T> list) {
+        LinkedList<T> copy = new LinkedList<>();
+        Iterator<T> iterator = list.iterator();
+        while (iterator.hasNext()) {
+            copy.add(iterator.next());
+        }
+        return copy;
     }
 
     @Override
@@ -26,9 +36,7 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
     public TValue get(@NonNull String key) {
         for (Entry entry : lruCache) {
             if (entry.getKey().equals(key)) {
-                lruCache.remove(entry);
-                lruCache.addFirst(entry);
-                return entry.getValue();
+                return swapToFirstForLru(entry).getValue();
             }
         }
         return null;
@@ -40,23 +48,26 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
         for (int i = 0; i < lruCache.size(); i++) {
             Entry entry = lruCache.get(i);
             if (entry.getKey().equals(key)) {
-                lruCache.remove(i);
+                removeLru(i);
                 break;
             }
         }
-        lruCache.addFirst(newEntry);
+        addFirstAndRemoveIfNecessaryForLru(newEntry);
         removeLastEntry();
     }
 
     private void removeLastEntry() {
-        while (lruCache.size() > maxCacheNumber) {
-            lruCache.pop();
+        if (lruCache.size() <= maxCacheNumber) return;
+        LinkedList<Entry> lruCopy = linkedListCopier(lruCache);
+        while (lruCopy.size() > maxCacheNumber) {
+            lruCopy.pop();
         }
+        lruCache = lruCopy;
     }
 
     @Override
     public void clear() {
-        lruCache.clear();
+        lruCache = new LinkedList<>();
     }
 
     @Override
@@ -75,10 +86,36 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
             Entry entry = lruCache.get(i);
             String entryKey = entry.getKey();
             if (entryKey.equals(key)) {
-                lruCache.remove(i);
+                removeLru(i);
                 return;
             }
         }
+    }
+
+    private void addFirstAndRemoveIfNecessaryForLru(Entry entry) {
+        LinkedList<Entry> lruCopy = linkedListCopier(lruCache);
+        lruCopy.addFirst(entry);
+        while (lruCopy.size() > maxCacheNumber) {
+            lruCopy.pop();
+        }
+        lruCache = lruCopy;
+    }
+
+    private Entry swapToFirstForLru(Entry entry) {
+        LinkedList<Entry> lruCopy = linkedListCopier(lruCache);
+        lruCopy.remove(entry);
+        lruCopy.addFirst(entry);
+        while (lruCopy.size() > maxCacheNumber) {
+            lruCopy.pop();
+        }
+        lruCache = lruCopy;
+        return entry;
+    }
+
+    private void removeLru(int i) {
+        LinkedList<Entry> lruCopy = linkedListCopier(lruCache);
+        lruCopy.remove(i);
+        lruCache = lruCopy;
     }
 
     private class Entry {

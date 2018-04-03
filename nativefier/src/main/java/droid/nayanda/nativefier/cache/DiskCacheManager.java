@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Vector;
 
 import droid.nayanda.nativefier.DiskUsage;
 import droid.nayanda.nativefier.serializer.Serializer;
@@ -32,7 +33,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private Serializer<TValue> serializer;
     private int maxCacheNumber;
     private LinkedList<String> index;
-    private LinkedList<DiskTask> pendingDiskTasks = new LinkedList<>();
+    private Vector<DiskTask> pendingDiskTasks = new Vector<>();
     private boolean isWriting = false;
     private boolean isIndexNeedUpdate = false;
     private Context context;
@@ -79,6 +80,15 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         }
     }
 
+    private static <T> LinkedList<T> linkedListCopier(LinkedList<T> list) {
+        LinkedList<T> copy = new LinkedList<>();
+        Iterator<T> iterator = list.iterator();
+        while (iterator.hasNext()) {
+            copy.add(iterator.next());
+        }
+        return copy;
+    }
+
     @Override
     public int getMaxCacheNumber() {
         return maxCacheNumber;
@@ -121,39 +131,27 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                     }
                 }
             }
-            index.remove(key);
+            removeIndex(key);
             isIndexNeedUpdate = true;
             writeAllPendingTask();
             return null;
         }
         try {
             TValue obj = deserializeFile(file);
-            index.remove(key);
-            index.addFirst(key);
+            removeIndex(key);
+            addFirstAndRemoveIfNecessaryForIndex(key);
             isIndexNeedUpdate = true;
             writeAllPendingTask();
             return obj;
         } catch (Exception e) {
             Log.e("Nativiefier Error", e.getMessage());
-            index.remove(key);
+            removeIndex(key);
             isIndexNeedUpdate = true;
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
             writeAllPendingTask();
             return null;
         }
 
-    }
-
-    private void removeLastIndex() {
-        boolean needUpdate = false;
-        if (index.size() > maxCacheNumber) {
-            needUpdate = true;
-            while (index.size() > maxCacheNumber) {
-                index.pop();
-            }
-        }
-        isIndexNeedUpdate = needUpdate;
-        writeAllPendingTask();
     }
 
     private TValue deserializeFile(File file) throws IOException, ClassNotFoundException {
@@ -164,11 +162,10 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     @Override
     public void put(@NonNull String key, @NonNull TValue value) {
         if (!isExist(key)) {
-            index.addFirst(key);
-            removeLastIndex();
+            addFirstAndRemoveIfNecessaryForIndex(key);
         } else {
-            index.remove(key);
-            index.addFirst(key);
+            removeIndex(key);
+            addFirstAndRemoveIfNecessaryForIndex(key);
             isIndexNeedUpdate = true;
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, value)));
         }
@@ -267,11 +264,11 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public void clear() {
-        pendingDiskTasks.clear();
+        pendingDiskTasks = new Vector<>();
         for (String key : index) {
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
         }
-        index.clear();
+        index = new LinkedList<>();
         isIndexNeedUpdate = true;
         writeAllPendingTask();
     }
@@ -285,13 +282,31 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     public void delete(@NonNull String key) {
         pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
         Iterator<DiskTask> iterator = pendingDiskTasks.iterator();
-        index.remove(key);
+        removeIndex(key);
         while (iterator.hasNext()) {
             DiskTask task = iterator.next();
             if (task.getType() == TaskType.WRITE) {
                 if (task.getTask().fileName.equals(key)) iterator.remove();
             }
         }
+    }
+
+    private void addFirstAndRemoveIfNecessaryForIndex(String key) {
+        LinkedList<String> indexCopy = linkedListCopier(index);
+        indexCopy.addFirst(key);
+        boolean isIndexNeedUpdate = false;
+        while (indexCopy.size() > maxCacheNumber) {
+            indexCopy.pop();
+            isIndexNeedUpdate = true;
+        }
+        index = indexCopy;
+        if (isIndexNeedUpdate) writeAllPendingTask();
+    }
+
+    private void removeIndex(String key) {
+        LinkedList<String> indexCopy = linkedListCopier(index);
+        indexCopy.remove(key);
+        index = indexCopy;
     }
 
     private enum TaskType {
