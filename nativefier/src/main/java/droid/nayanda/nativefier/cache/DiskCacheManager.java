@@ -15,7 +15,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.LinkedList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -30,14 +29,14 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
     private final File directory;
     private final File indexFile;
-    private final LinkedList<String> index;
+    private final ConcurrentLinkedQueue<String> index;
     private final ConcurrentHashMap<File, AsyncReader> readingTask = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<DiskTask> pendingDiskTasks = new ConcurrentLinkedQueue<>();
-    private Serializer<TValue> serializer;
-    private int maxCacheNumber;
+    private final Serializer<TValue> serializer;
+    private final int maxCacheNumber;
+    private final Context context;
     private boolean isWriting = false;
     private boolean isIndexNeedUpdate = false;
-    private Context context;
 
     public DiskCacheManager(@NonNull Context context, @NonNull DiskUsage diskUsage, @NonNull String containerName, int maxCacheNumber, Serializer<TValue> serializer) throws IOException {
         this.context = context;
@@ -56,7 +55,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         this.indexFile = new File(this.directory, "index.dat");
         if (!indexFile.exists()) {
             if (!indexFile.createNewFile()) throw new IOException("Failed to create new file");
-            index = new LinkedList<>();
+            index = new ConcurrentLinkedQueue<>();
         } else index = readFileToList(indexFile);
         this.serializer = serializer;
         this.maxCacheNumber = maxCacheNumber;
@@ -85,9 +84,9 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         return maxCacheNumber;
     }
 
-    private LinkedList<String> readFileToList(File file) {
+    private ConcurrentLinkedQueue<String> readFileToList(File file) {
         BufferedReader reader = null;
-        LinkedList<String> strings = new LinkedList<>();
+        ConcurrentLinkedQueue<String> strings = new ConcurrentLinkedQueue<>();
         InputStream inputStream = null;
         try {
             inputStream = new FileInputStream(file.getAbsoluteFile());
@@ -98,6 +97,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                 line = reader.readLine();
             }
             reader.close();
+            inputStream.close();
         } catch (Exception e) {
             Log.e("Nativiefier Error", e.getMessage());
             if (reader != null) try {
@@ -136,9 +136,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             return obj;
         } catch (Exception e) {
             Log.e("Nativiefier Error", e.getMessage());
-            synchronized (index) {
-                index.remove(key);
-            }
+            index.remove(key);
             isIndexNeedUpdate = true;
             pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
             writeAllPendingTask();
@@ -256,12 +254,8 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             if (!indexFile.exists()) {
                 if (!indexFile.createNewFile()) throw new IOException("Failed to create new file");
             }
-            int indexSize;
-            synchronized (index) {
-                indexSize = index.size();
-            }
-            if (indexSize > 0) {
-                String[] thisIndex = index.toArray(new String[indexSize]);
+            if (index.size() > 0) {
+                String[] thisIndex = index.toArray(new String[index.size()]);
                 isIndexNeedUpdate = false;
                 StringBuilder builder = new StringBuilder();
                 for (String line : thisIndex) {
@@ -284,12 +278,11 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public void clear() {
-        synchronized (index) {
-            pendingDiskTasks.clear();
-            for (String key : index) {
-                pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
-            }
-            index.clear();
+        pendingDiskTasks.clear();
+        String key = index.poll();
+        while (key != null) {
+            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
+            key = index.poll();
         }
         isIndexNeedUpdate = true;
         writeAllPendingTask();
@@ -297,29 +290,23 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public boolean isExist(@NonNull String key) {
-        synchronized (index) {
-            return index.contains(key);
-        }
+        return index.contains(key);
     }
 
     @Override
     public void delete(@NonNull String key) {
         pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
-        synchronized (index) {
-            index.remove(key);
-        }
+        index.remove(key);
         isIndexNeedUpdate = true;
         writeAllPendingTask();
     }
 
     private void addFirstAndRemoveIfNecessaryForIndex(String key) {
-        synchronized (index) {
-            index.remove(key);
-            index.addFirst(key);
-            while (index.size() > maxCacheNumber) {
-                index.removeLast();
-                isIndexNeedUpdate = true;
-            }
+        index.remove(key);
+        index.offer(key);
+        while (index.size() > maxCacheNumber) {
+            index.poll();
+            isIndexNeedUpdate = true;
         }
         writeAllPendingTask();
     }
