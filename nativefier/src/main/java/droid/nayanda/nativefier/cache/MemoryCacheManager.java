@@ -4,6 +4,8 @@ import android.support.annotation.NonNull;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import droid.nayanda.nativefier.model.Entry;
+
 /**
  * Created by nayanda on 18/03/18.
  */
@@ -38,7 +40,7 @@ public class MemoryCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public void put(@NonNull String key, @NonNull TValue value) {
-        Entry newEntry = new Entry(key, value);
+        Entry<TValue> newEntry = new Entry<>(key, value);
         lruCache.remove(newEntry);
         lruCache.offer(newEntry);
         while (lruCache.size() > maxCacheNumber) {

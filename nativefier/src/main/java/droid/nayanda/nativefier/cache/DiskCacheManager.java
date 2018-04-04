@@ -34,7 +34,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     private final ConcurrentLinkedQueue<String> index;
     private final ConcurrentHashMap<File, TValue> readingResult = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<File> readingResultKey = new ConcurrentLinkedQueue<>();
-    private final ConcurrentLinkedQueue<DiskTask> pendingDiskTasks = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<DiskTask<TValue>> pendingDiskTasks = new ConcurrentLinkedQueue<>();
     private final Serializer<TValue> serializer;
     private final int maxCacheNumber;
     private final Context context;
@@ -104,7 +104,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         if (!isExist(key)) return null;
         File file = new File(directory, key + ".ch");
         if (!file.exists()) {
-            for (DiskTask task : pendingDiskTasks) {
+            for (DiskTask<TValue> task : pendingDiskTasks) {
                 if (task != null) {
                     if (task.getType() == TaskType.WRITE) {
                         if (task.getTask().getFileName().equals(key)) {
@@ -125,7 +125,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             Log.e("Nativiefier Error", e.getMessage());
             index.remove(key);
             updateIndex();
-            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
+            pendingDiskTasks.add(new DiskTask<>(TaskType.DELETE, new TaskPair<>(key, null)));
             writeAllPendingTask();
             return null;
 
@@ -137,7 +137,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         pendingDiskTasks.clear();
         String key = index.poll();
         while (key != null) {
-            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
+            pendingDiskTasks.add(new DiskTask<>(TaskType.DELETE, new TaskPair<>(key, null)));
             key = index.poll();
         }
         updateIndex();
@@ -151,7 +151,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
 
     @Override
     public void delete(@NonNull String key) {
-        pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
+        pendingDiskTasks.add(new DiskTask<>(TaskType.DELETE, new TaskPair<>(key, null)));
         index.remove(key);
         updateIndex();
         writeAllPendingTask();
@@ -172,9 +172,9 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
                 }
             }
             pendingDiskTasks.removeAll(removeTask);
-            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, value)));
+            pendingDiskTasks.add(new DiskTask<>(TaskType.DELETE, new TaskPair<>(key, value)));
         }
-        pendingDiskTasks.add(new DiskTask(TaskType.WRITE, new TaskPair(key, value)));
+        pendingDiskTasks.add(new DiskTask<>(TaskType.WRITE, new TaskPair<>(key, value)));
         writeAllPendingTask();
     }
 
@@ -221,7 +221,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
     }
 
     private void executePendingDiskTask() {
-        DiskTask task = pendingDiskTasks.poll();
+        DiskTask<TValue> task = pendingDiskTasks.poll();
         while (task != null) {
             switch (task.getType()) {
                 case WRITE:
@@ -241,7 +241,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         file.delete();
     }
 
-    private void putToDisk(TaskPair task) {
+    private void putToDisk(TaskPair<TValue> task) {
         FileOutputStream outputStream = null;
         try {
             File file = new File(directory, task.getFileName() + ".ch");
@@ -311,11 +311,11 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         WRITE, DELETE
     }
 
-    private class TaskPair {
+    private class TaskPair<TObj> {
         private String fileName;
-        private TValue object;
+        private TObj object;
 
-        TaskPair(String fileName, TValue object) {
+        TaskPair(String fileName, TObj object) {
             this.fileName = fileName;
             this.object = object;
         }
@@ -324,16 +324,35 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             return fileName;
         }
 
-        TValue getObject() {
+        TObj getObject() {
             return object;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TaskPair)) return false;
+
+            TaskPair<?> taskPair = (TaskPair<?>) o;
+
+            if (fileName != null ? !fileName.equals(taskPair.fileName) : taskPair.fileName != null)
+                return false;
+            return object != null ? object.equals(taskPair.object) : taskPair.object == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = fileName != null ? fileName.hashCode() : 0;
+            result = 31 * result + (object != null ? object.hashCode() : 0);
+            return result;
         }
     }
 
-    class DiskTask {
+    class DiskTask<TPairObj> {
         private TaskType type;
-        private TaskPair task;
+        private TaskPair<TPairObj> task;
 
-        DiskTask(TaskType type, TaskPair task) {
+        DiskTask(TaskType type, TaskPair<TPairObj> task) {
             this.type = type;
             this.task = task;
         }
@@ -342,8 +361,26 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             return type;
         }
 
-        TaskPair getTask() {
+        TaskPair<TPairObj> getTask() {
             return task;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof DiskTask)) return false;
+
+            DiskTask<?> task1 = (DiskTask<?>) o;
+
+            if (type != task1.type) return false;
+            return task != null ? task.equals(task1.task) : task1.task == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = type != null ? type.hashCode() : 0;
+            result = 31 * result + (task != null ? task.hashCode() : 0);
+            return result;
         }
     }
 }

@@ -1,4 +1,4 @@
-package droid.nayanda.nativefier.cache;
+package droid.nayanda.nativefier.model;
 
 import android.support.annotation.NonNull;
 
