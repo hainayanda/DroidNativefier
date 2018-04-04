@@ -64,12 +64,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         this.maxCacheNumber = maxCacheNumber;
     }
 
-    @Override
-    public int getMaxCacheNumber() {
-        return maxCacheNumber;
-    }
-
-    private ConcurrentLinkedQueue<String> readFileToList(File file) {
+    private static ConcurrentLinkedQueue<String> readFileToList(File file) {
         BufferedReader reader = null;
         ConcurrentLinkedQueue<String> strings = new ConcurrentLinkedQueue<>();
         InputStream inputStream = null;
@@ -97,6 +92,11 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             }
         }
         return strings;
+    }
+
+    @Override
+    public int getMaxCacheNumber() {
+        return maxCacheNumber;
     }
 
     @Override
@@ -132,6 +132,52 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         }
     }
 
+    @Override
+    public void clear() {
+        pendingDiskTasks.clear();
+        String key = index.poll();
+        while (key != null) {
+            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
+            key = index.poll();
+        }
+        updateIndex();
+        writeAllPendingTask();
+    }
+
+    @Override
+    public boolean isExist(@NonNull String key) {
+        return index.contains(key);
+    }
+
+    @Override
+    public void delete(@NonNull String key) {
+        pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
+        index.remove(key);
+        updateIndex();
+        writeAllPendingTask();
+    }
+
+    @Override
+    public void put(@NonNull String key, @NonNull TValue value) {
+        if (!isExist(key)) {
+            addFirstAndRemoveIfNecessaryForIndex(key);
+        } else {
+            addFirstAndRemoveIfNecessaryForIndex(key);
+            LinkedList<DiskTask> removeTask = new LinkedList<>();
+            for (DiskTask task : pendingDiskTasks) {
+                if (task != null) {
+                    if (task.getType() == TaskType.WRITE) {
+                        if (task.getTask().getFileName().equals(key)) removeTask.add(task);
+                    }
+                }
+            }
+            pendingDiskTasks.removeAll(removeTask);
+            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, value)));
+        }
+        pendingDiskTasks.add(new DiskTask(TaskType.WRITE, new TaskPair(key, value)));
+        writeAllPendingTask();
+    }
+
     private TValue deserializeFile(File file) throws IOException, ClassNotFoundException {
         InputStream inputStream = null;
         try {
@@ -160,27 +206,6 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             File key = readingResultKey.poll();
             readingResult.remove(key);
         }
-    }
-
-    @Override
-    public void put(@NonNull String key, @NonNull TValue value) {
-        if (!isExist(key)) {
-            addFirstAndRemoveIfNecessaryForIndex(key);
-        } else {
-            addFirstAndRemoveIfNecessaryForIndex(key);
-            LinkedList<DiskTask> removeTask = new LinkedList<>();
-            for (DiskTask task : pendingDiskTasks) {
-                if (task != null) {
-                    if (task.getType() == TaskType.WRITE) {
-                        if (task.getTask().getFileName().equals(key)) removeTask.add(task);
-                    }
-                }
-            }
-            pendingDiskTasks.removeAll(removeTask);
-            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, value)));
-        }
-        pendingDiskTasks.add(new DiskTask(TaskType.WRITE, new TaskPair(key, value)));
-        writeAllPendingTask();
     }
 
     private void writeAllPendingTask() {
@@ -270,31 +295,6 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
             }
             isUpdating.set(false);
         }));
-    }
-
-    @Override
-    public void clear() {
-        pendingDiskTasks.clear();
-        String key = index.poll();
-        while (key != null) {
-            pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
-            key = index.poll();
-        }
-        updateIndex();
-        writeAllPendingTask();
-    }
-
-    @Override
-    public boolean isExist(@NonNull String key) {
-        return index.contains(key);
-    }
-
-    @Override
-    public void delete(@NonNull String key) {
-        pendingDiskTasks.add(new DiskTask(TaskType.DELETE, new TaskPair(key, null)));
-        index.remove(key);
-        updateIndex();
-        writeAllPendingTask();
     }
 
     private void addFirstAndRemoveIfNecessaryForIndex(String key) {
