@@ -3,6 +3,7 @@ package droid.nayanda.nativefier.cache;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,7 +18,7 @@ class AsyncSchedulerHandler {
     private AsyncSchedulerHandler() {
     }
 
-    static void execute(final Runnable task, final Context context) {
+    static void execute(@NonNull final Runnable task, @NonNull final Context context) {
         int maxNumberOfThread = NativefierContext.getMaxThreadCount();
         if (numberOfThread.get() <= maxNumberOfThread) {
             Handler uiHandler = new Handler(context.getMainLooper());
