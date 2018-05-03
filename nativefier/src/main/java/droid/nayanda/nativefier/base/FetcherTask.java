@@ -12,7 +12,7 @@ public class FetcherTask<TValue> extends AsyncTask<String, Void, TValue> {
     private final Finisher<TValue> finisher;
     private final Task<String, TValue> task;
 
-    FetcherTask(@NonNull Task<String, TValue> task, @NonNull Finisher<TValue> finisher){
+    FetcherTask(@NonNull Task<String, TValue> task, @NonNull Finisher<TValue> finisher) {
         this.finisher = finisher;
         this.task = task;
     }
@@ -23,7 +23,7 @@ public class FetcherTask<TValue> extends AsyncTask<String, Void, TValue> {
     }
 
     @Override
-    protected void onPostExecute(TValue value){
+    protected void onPostExecute(TValue value) {
         finisher.onFinished(value);
     }
 }

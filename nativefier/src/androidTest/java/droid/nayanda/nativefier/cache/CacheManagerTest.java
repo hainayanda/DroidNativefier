@@ -15,6 +15,7 @@ import java.io.IOException;
 
 import droid.nayanda.nativefier.CacheModel;
 import droid.nayanda.nativefier.DiskUsage;
+import droid.nayanda.nativefier.NativefierContext;
 import droid.nayanda.nativefier.serializer.SerializableSerializer;
 
 import static org.junit.Assert.assertEquals;
@@ -30,6 +31,7 @@ public class CacheManagerTest {
     private static MemoryCacheManager<CacheModel> memCacheManager;
 
     private static DiskCacheManager<CacheModel> getDiskCacheManager() throws IOException {
+        NativefierContext.setMaxThreadCount(2);
         if (diskCacheManager == null) {
             Context appContext = InstrumentationRegistry.getTargetContext();
             diskCacheManager = new DiskCacheManager<>(appContext, DiskUsage.EXTERNAL, "manager", 4, new SerializableSerializer<>());

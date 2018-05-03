@@ -24,8 +24,10 @@ import static org.junit.Assert.assertTrue;
 public class NativefierTest {
 
     private static Nativefier<Model> nativefier;
+
     private static Nativefier<Model> getNativefier() throws IOException {
-        if(nativefier == null) {
+        NativefierContext.setMaxThreadCount(2);
+        if (nativefier == null) {
             Context appContext = InstrumentationRegistry.getTargetContext();
             nativefier = Builder.<Model>getJsonNativefier().setContext(appContext).setContainerName("model")
                     .setMaxCacheNumber(4).setMaxRamCacheNumber(2)

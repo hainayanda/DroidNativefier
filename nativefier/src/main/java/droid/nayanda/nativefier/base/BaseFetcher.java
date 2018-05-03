@@ -10,7 +10,7 @@ public abstract class BaseFetcher<TValue> implements Fetcher<TValue> {
 
     private final Task<String, TValue> task;
 
-    public BaseFetcher(@NonNull Task<String, TValue> task){
+    public BaseFetcher(@NonNull Task<String, TValue> task) {
         this.task = task;
     }
 
