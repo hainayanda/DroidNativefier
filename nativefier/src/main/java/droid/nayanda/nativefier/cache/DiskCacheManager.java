@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import droid.nayanda.nativefier.AsyncScheduler;
 import droid.nayanda.nativefier.DiskUsage;
 import droid.nayanda.nativefier.model.DiskTask;
 import droid.nayanda.nativefier.model.TaskPair;
@@ -213,7 +214,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         if (isWriting.get()) return;
         isWriting.set(true);
         Handler uiHandler = new Handler(context.getMainLooper());
-        uiHandler.post(() -> AsyncSchedulerHandler.execute(() -> {
+        uiHandler.post(() -> AsyncScheduler.execute(() -> {
             while (pendingDiskTasks.size() > 0) {
                 executePendingDiskTask();
             }
@@ -268,7 +269,7 @@ public class DiskCacheManager<TValue> implements CacheManager<TValue> {
         if (isUpdating.get()) return;
         isUpdating.set(true);
         Handler uiHandler = new Handler(context.getMainLooper());
-        uiHandler.post(() -> AsyncSchedulerHandler.execute(() -> {
+        uiHandler.post(() -> AsyncScheduler.execute(() -> {
             BufferedWriter writer = null;
             try {
                 if (!indexFile.exists()) {

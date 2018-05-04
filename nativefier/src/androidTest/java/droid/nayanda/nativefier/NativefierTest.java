@@ -26,7 +26,8 @@ public class NativefierTest {
     private static Nativefier<Model> nativefier;
 
     private static Nativefier<Model> getNativefier() throws IOException {
-        NativefierContext.setMaxThreadCount(2);
+        NativefierContext.setMaxPoolThreadCount(2);
+        NativefierContext.setMaxQueueThreadCount(2);
         if (nativefier == null) {
             Context appContext = InstrumentationRegistry.getTargetContext();
             nativefier = Builder.<Model>getJsonNativefier().setContext(appContext).setContainerName("model")

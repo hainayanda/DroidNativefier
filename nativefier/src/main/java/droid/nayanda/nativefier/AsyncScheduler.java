@@ -1,4 +1,4 @@
-package droid.nayanda.nativefier.cache;
+package droid.nayanda.nativefier;
 
 import android.content.Context;
 import android.os.AsyncTask;
@@ -6,21 +6,17 @@ import android.os.Handler;
 import android.support.annotation.NonNull;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
-import droid.nayanda.nativefier.NativefierContext;
-
-class AsyncSchedulerHandler {
+public class AsyncScheduler {
 
     private static final ConcurrentLinkedQueue<Runnable> pendingTask = new ConcurrentLinkedQueue<>();
-    private static final AtomicInteger numberOfThread = new AtomicInteger(0);
 
-    private AsyncSchedulerHandler() {
+    private AsyncScheduler() {
     }
 
-    static void execute(@NonNull final Runnable task, @NonNull final Context context) {
-        int maxNumberOfThread = NativefierContext.getMaxThreadCount();
-        if (numberOfThread.get() <= maxNumberOfThread) {
+    public static void execute(@NonNull final Runnable task, @NonNull final Context context) {
+        int maxNumberOfThread = NativefierContext.getMaxQueueThreadCount();
+        if (NativefierContext.getNumberOfQueueRunning() <= maxNumberOfThread) {
             Handler uiHandler = new Handler(context.getMainLooper());
             uiHandler.post(() -> new Runner().execute(task, context));
         } else {
@@ -33,7 +29,7 @@ class AsyncSchedulerHandler {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            numberOfThread.incrementAndGet();
+            NativefierContext.incrementNumberOfQueueRunning();
         }
 
         @Override
@@ -51,10 +47,10 @@ class AsyncSchedulerHandler {
         @Override
         protected void onPostExecute(Context context) {
             super.onPostExecute(context);
-            numberOfThread.decrementAndGet();
+            NativefierContext.decrementNumberOfQueueRunning();
             Runnable task = pendingTask.poll();
             if (task != null) {
-                AsyncSchedulerHandler.execute(task, context);
+                AsyncScheduler.execute(task, context);
             }
         }
     }

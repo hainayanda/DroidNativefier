@@ -31,7 +31,8 @@ public class CacheManagerTest {
     private static MemoryCacheManager<CacheModel> memCacheManager;
 
     private static DiskCacheManager<CacheModel> getDiskCacheManager() throws IOException {
-        NativefierContext.setMaxThreadCount(2);
+        NativefierContext.setMaxPoolThreadCount(2);
+        NativefierContext.setMaxQueueThreadCount(2);
         if (diskCacheManager == null) {
             Context appContext = InstrumentationRegistry.getTargetContext();
             diskCacheManager = new DiskCacheManager<>(appContext, DiskUsage.EXTERNAL, "manager", 4, new SerializableSerializer<>());

@@ -1,7 +1,6 @@
 package droid.nayanda.nativefier;
 
 import android.content.Context;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -81,8 +80,7 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
     public void asyncGet(@NonNull String key, final Finisher<TValue> finisher) {
         final TValue obj = get(key);
         if (obj == null && fetcher != null) {
-            Handler uiHandler = new Handler(context.getMainLooper());
-            uiHandler.post(() -> fetcher.asyncFetch(key,
+            fetcher.asyncFetch(key,
                     new ArgumentsFinisher<TValue, Object>(finisher, key, memoryCacheManager, diskCacheManager) {
                         @Override
                         public void onFinished(TValue obj1, Object[] args) {
@@ -96,7 +94,7 @@ public class Nativefier<TValue> implements CacheManager<TValue> {
                                 Log.e("Nativefier Error", e.getMessage());
                             }
                         }
-                    }));
+                    });
         } else try {
             finisher.onFinished(obj);
         } catch (Exception e) {
